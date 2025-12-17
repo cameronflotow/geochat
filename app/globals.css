@@ -1,42 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --primary: #9d4edd;
+  /* Purple */
+  --secondary: #e0aaff;
+  /* Light Purple/Pink */
+  --accent: #ff00ff;
+  /* Magenta */
+  --glass-bg: rgba(20, 20, 20, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-blur: 12px;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-* {
-  box-sizing: border-box;
-  padding: 0;
+  overflow: hidden;
+  /* Prevent scrolling on map */
   margin: 0;
+  padding: 0;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+/* Utils */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  font-weight: bold;
+}
+
+.btn-primary:active {
+  transform: scale(0.95);
+}
+
+.glow-text {
+  text-shadow: 0 0 10px var(--primary);
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(157, 78, 221, 0.7);
   }
+
+  70% {
+    box-shadow: 0 0 0 10px rgba(157, 78, 221, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(157, 78, 221, 0);
+  }
+}
+
+@keyframes pulse-slow {
+  0% {
+    fill-opacity: 0.2;
+  }
+
+  50% {
+    fill-opacity: 0.5;
+  }
+
+  100% {
+    fill-opacity: 0.2;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2s infinite;
+}
+
+/* Map specific overrides */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: #1a1a1a;
 }
