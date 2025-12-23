@@ -95,5 +95,32 @@ body {
 .leaflet-container {
   width: 100%;
   height: 100%;
-  background: #1a1a1a;
+  background: #000000;
+}
+
+@keyframes pulse-color {
+  0% {
+    fill: #9d4edd;
+    stroke: #9d4edd;
+    fill-opacity: 0.2;
+    stroke-opacity: 0.5;
+  }
+
+  50% {
+    fill: #ff00ff;
+    stroke: #ff00ff;
+    fill-opacity: 0.7;
+    stroke-opacity: 1;
+  }
+
+  100% {
+    fill: #9d4edd;
+    stroke: #9d4edd;
+    fill-opacity: 0.2;
+    stroke-opacity: 0.5;
+  }
+}
+
+.animate-pulse-color {
+  animation: pulse-color 1.5s infinite ease-in-out !important;
 }

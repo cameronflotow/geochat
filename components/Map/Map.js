@@ -39,7 +39,7 @@ function RecenterMap({ lat, lng }) {
 
     // Initial center only
     useEffect(() => {
-        map.setView([lat, lng], 18);
+        map.setView([lat, lng], 15);
     }, []); // eslint-disable-line
     return null;
 }
@@ -68,9 +68,9 @@ export default function Map({ userLocation, chats, onChatClick, highlightedChatI
     return (
         <MapContainer
             center={userLocation ? [userLocation.lat, userLocation.lng] : defaultPosition}
-            zoom={17}
+            zoom={15}
             scrollWheelZoom={true}
-            className="w-full h-full z-0 bg-[#1a1a1a]"
+            className="w-full h-full z-0 bg-black"
             zoomControl={false}
         >
             <TileLayer
@@ -92,8 +92,15 @@ export default function Map({ userLocation, chats, onChatClick, highlightedChatI
                 const highlighted = highlightedChatIds.includes(chat.id);
 
                 let color = '#9d4edd'; // Default Purple
-                if (highlighted) color = '#ffffff'; // White if highlighted
-                else if (active) color = '#ff00ff'; // OSciillating if inside
+                let className = '';
+
+                if (active) {
+                    color = '#ff00ff'; // Magenta (Inside)
+                    className = 'animate-pulse-color';
+                } else if (highlighted) {
+                    color = '#ffffff'; // White (Notification)
+                    className = 'animate-pulse';
+                }
 
                 return (
                     <Circle
@@ -105,7 +112,7 @@ export default function Map({ userLocation, chats, onChatClick, highlightedChatI
                             fillColor: color,
                             fillOpacity: (active || highlighted) ? 0.3 : 0.2,
                             weight: (active || highlighted) ? 2 : 1,
-                            className: highlighted ? 'animate-pulse' : (active ? 'animate-pulse-slow' : '')
+                            className: className
                         }}
                         eventHandlers={{
                             click: () => onChatClick(chat, active)

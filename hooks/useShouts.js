@@ -1,0 +1,79 @@
+import { useState, useEffect } from 'react';
+import { collection, query, onSnapshot, orderBy, startAt, endAt, limit } from 'firebase/firestore';
+import { geohashQueryBounds, distanceBetween } from 'geofire-common';
+import { db } from '@/lib/firebase';
+
+const SHOUT_RADIUS_M = 4 * 1609.34; // 4 miles in meters (~6437m)
+
+export function useShouts(userLocation) {
+    const [shouts, setShouts] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!userLocation) {
+            setShouts([]);
+            setLoading(false);
+            return;
+        }
+
+        const center = [userLocation.lat, userLocation.lng];
+        const bounds = geohashQueryBounds(center, SHOUT_RADIUS_M);
+
+        const listeners = [];
+        const resultsByBound = new Map();
+
+        const updateState = () => {
+            const allDocs = [];
+            resultsByBound.forEach(docs => allDocs.push(...docs));
+
+            const uniqueMap = new Map();
+            allDocs.forEach(doc => {
+                const data = doc.data();
+                const distanceInM = distanceBetween([data.lat, data.lng], center) * 1000;
+
+                // TTL Check (24h)
+                const now = Date.now();
+                const createdAt = data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.createdAt || 0);
+                const isExpired = (now - createdAt) > (24 * 60 * 60 * 1000);
+
+                if (!uniqueMap.has(doc.id) && distanceInM <= SHOUT_RADIUS_M && !isExpired) {
+                    uniqueMap.set(doc.id, { id: doc.id, ...data });
+                }
+            });
+
+            // Sort by time desc
+            const sorted = Array.from(uniqueMap.values()).sort((a, b) => {
+                const tA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+                const tB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+                return tB - tA;
+            });
+
+            setShouts(sorted);
+            setLoading(false);
+        };
+
+        bounds.forEach((b, index) => {
+            const q = query(
+                collection(db, "shouts"),
+                orderBy("geohash"),
+                startAt(b[0]),
+                endAt(b[1])
+                // limit(50)? Shouts feed might need pagination but start with raw stream
+            );
+
+            const unsubscribe = onSnapshot(q, (snapshot) => {
+                resultsByBound.set(index, snapshot.docs);
+                updateState();
+            }, (error) => {
+                console.error(`Error fetching shouts bound ${index}:`, error);
+            });
+            listeners.push(unsubscribe);
+        });
+
+        return () => {
+            listeners.forEach(unsub => unsub());
+        };
+    }, [userLocation?.lat, userLocation?.lng]);
+
+    return { shouts, loading };
+}

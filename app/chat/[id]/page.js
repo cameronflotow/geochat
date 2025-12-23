@@ -11,6 +11,7 @@ import { usePosts } from '@/hooks/usePosts';
 import UserProfileModal from '@/components/UserProfileModal';
 import PostItem from '@/components/PostItem';
 import PeopleListModal from '@/components/PeopleListModal';
+import { deleteChatFully, deletePostFully } from '@/lib/db-cleanup';
 
 export default function ChatPage({ params }) {
     const { id: chatId } = use(params);
@@ -23,7 +24,7 @@ export default function ChatPage({ params }) {
     const [sending, setSending] = useState(false);
     const [user, setUser] = useState(null); // Initialize null
     const [isPeopleOpen, setIsPeopleOpen] = useState(false);
-    const [hasUnread, setHasUnread] = useState(false);
+    const [unreadUserIds, setUnreadUserIds] = useState(new Set());
 
     // Auth Listener to ensure user is loaded on refresh
     useEffect(() => {
@@ -44,7 +45,7 @@ export default function ChatPage({ params }) {
         );
 
         const unsub = onSnapshot(q, (snap) => {
-            let unread = false;
+            const newUnreadIds = new Set();
             snap.docs.forEach(doc => {
                 const data = doc.data();
 
@@ -61,11 +62,15 @@ export default function ChatPage({ params }) {
                     const myViewTime = myViewParams?.toMillis?.() || 0;
 
                     if (lastMsgTime > myViewTime) {
-                        unread = true;
+                        // Identify the OTHER user in this chat
+                        const otherUserId = data.participants.find(p => p !== user.uid);
+                        if (otherUserId) {
+                            newUnreadIds.add(otherUserId);
+                        }
                     }
                 }
             });
-            setHasUnread(unread);
+            setUnreadUserIds(newUnreadIds);
         });
         return () => unsub();
     }, [user]);
@@ -90,7 +95,10 @@ export default function ChatPage({ params }) {
         // Heartbeat every 2 minutes
         const interval = setInterval(updatePresence, 120000);
 
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(interval);
+            deleteDoc(presenceRef).catch(e => console.error("Error clearing presence:", e));
+        };
     }, [user, chatId]);
 
     // Load chat info (Real-time)
@@ -132,6 +140,23 @@ export default function ChatPage({ params }) {
 
         try {
             setSending(true);
+
+            // Rolling Window Logic: Limit to 300 posts
+            const MAX_POSTS = 300;
+            if (posts.length >= MAX_POSTS) {
+                // posts are ordered DESC (Newest First). So the last item is the Oldest.
+                // We keep (MAX_POSTS - 1) items, so we have room for the new one.
+                // If we are already at or above limit, we delete the overflow.
+
+                // Identify the oldest post(s) to remove
+                const oldestPost = posts[posts.length - 1]; // Simply pick the tail
+                if (oldestPost) {
+                    console.log(`Rolling Window: deleting oldest post ${oldestPost.id}`);
+                    // Fire and forget deletion to not block the new post
+                    deletePostFully(chatId, oldestPost.id).catch(err => console.error("Error cycling post:", err));
+                }
+            }
+
             await addDoc(collection(db, "chats", chatId, "posts"), {
                 text: msgText,
                 creatorId: user.uid,
@@ -178,22 +203,28 @@ export default function ChatPage({ params }) {
     );
 
     return (
-        <main className="w-screen h-screen flex flex-col bg-black text-white">
-            {/* Header */}
-            <div className="glass-panel p-4 flex items-center justify-between sticky top-0 z-10 mx-2 mt-2">
-                <button onClick={() => router.push('/')} className="p-2 hover:bg-white/10 rounded-full">
-                    <ArrowLeft className="w-6 h-6" />
-                </button>
+        <main className="w-screen h-[100dvh] flex flex-col bg-black text-white overflow-hidden">
+            {/* Header - Flex Item, Fixed at Top */}
+            <div className="glass-panel p-4 flex flex-none items-center justify-between mx-2 mt-2 z-10 shrink-0">
+                <div className="flex items-center gap-1">
+                    <button onClick={() => router.push('/')} className="p-2 hover:bg-white/10 rounded-full">
+                        <ArrowLeft className="w-6 h-6" />
+                    </button>
+                    <button onClick={() => setIsConversationsOpen(true)} className="p-2 hover:bg-white/10 rounded-full text-purple-400">
+                        <MessageCircle className="w-6 h-6" />
+                    </button>
+                </div>
+
                 <div className="flex-1 text-center flex flex-col items-center justify-center">
-                    <h1 className="font-bold text-lg leading-tight">{chatInfo.name}</h1>
+                    <h1 className="font-bold text-lg leading-tight truncate px-2">{chatInfo?.name}</h1>
                 </div>
                 <div className="flex items-center gap-1">
                     <button
                         onClick={() => setIsPeopleOpen(true)}
                         className="p-2 hover:bg-white/10 rounded-full relative"
                     >
-                        <Users className={`w-6 h-6 ${hasUnread ? 'text-purple-400 animate-pulse drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]' : 'text-purple-400'}`} />
-                        {hasUnread && <span className="absolute top-0 right-0 w-3 h-3 bg-pink-500 rounded-full animate-ping" />}
+                        <Users className={`w-6 h-6 ${unreadUserIds.size > 0 && !isPeopleOpen ? 'text-purple-400 animate-pulse drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]' : 'text-purple-400'}`} />
+                        {unreadUserIds.size > 0 && !isPeopleOpen && <span className="absolute top-0 right-0 w-3 h-3 bg-pink-500 rounded-full animate-ping" />}
                     </button>
                 </div>
             </div>
@@ -205,59 +236,67 @@ export default function ChatPage({ params }) {
                 match: chatInfo?.creatorId === user?.uid
             })}
 
+            <ConversationsModal
+                isOpen={isConversationsOpen}
+                onClose={() => setIsConversationsOpen(false)}
+                user={user}
+            />
+
             <PeopleListModal
                 isOpen={isPeopleOpen}
                 onClose={() => setIsPeopleOpen(false)}
                 chatId={chatId}
                 currentUserId={user?.uid}
-                isCreator={chatInfo.creatorId === user?.uid}
-                creatorId={chatInfo.creatorId}
+                isCreator={chatInfo?.creatorId === user?.uid}
+                creatorId={chatInfo?.creatorId}
+                unreadUserIds={unreadUserIds}
                 onDeleteChat={async () => {
-                    if (confirm("Delete this ENTIRE chat? This cannot be undone.")) {
-                        await deleteDoc(doc(db, "chats", chatId));
-                        router.push('/');
-                    }
+                    await deleteChatFully(chatId);
+                    router.push('/');
                 }}
             />
 
-            {/* Feed */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {/* Feed - Flexible Middle Area */}
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
                 {posts.map(post => (
                     <PostItem
                         key={post.id}
                         post={post}
                         chatId={chatId}
                         currentUserId={user?.uid}
-                        isOwner={chatInfo.creatorId === user?.uid}
+                        isOwner={chatInfo?.creatorId === user?.uid}
                     />
                 ))}
 
                 {posts.length === 0 && (
                     <div className="text-center text-gray-600 mt-10">Be the first to post!</div>
                 )}
-
-                {/* Spacer for bottom input */}
-                <div className="h-20" />
             </div>
 
-            {/* Input Area */}
-            <div className="absolute bottom-0 left-0 w-full bg-black/80 backdrop-blur-md p-4 border-t border-white/10 safe-pb z-20">
-                <div className="flex items-center gap-2 bg-white/5 rounded-2xl p-2 border border-white/10">
-                    <input
-                        type="text"
-                        value={msgText}
-                        onChange={e => setMsgText(e.target.value)}
-                        placeholder="Drop a message..."
-                        className="flex-1 bg-transparent border-none focus:outline-none px-2 text-white placeholder-gray-500"
-                        onKeyDown={e => e.key === 'Enter' && handlePost()}
-                    />
-                    <button
-                        onClick={handlePost}
-                        disabled={!msgText.trim() || sending}
-                        className="p-2 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl text-white disabled:opacity-50"
-                    >
-                        <Send className="w-5 h-5" />
-                    </button>
+            {/* Input Area - Flex Item, Fixed at Bottom */}
+            <div className="w-full bg-black/80 backdrop-blur-md p-4 border-t border-white/10 flex-none z-20 pb-safe-area-inset-bottom">
+                <div className="flex flex-col gap-1 w-full">
+                    <div className="flex items-center gap-2 bg-white/5 rounded-2xl p-2 border border-white/10">
+                        <input
+                            type="text"
+                            value={msgText}
+                            onChange={e => setMsgText(e.target.value)}
+                            placeholder="Drop a message..."
+                            maxLength={200}
+                            className="flex-1 bg-transparent border-none focus:outline-none px-2 text-white placeholder-gray-500"
+                            onKeyDown={e => e.key === 'Enter' && handlePost()}
+                        />
+                        <button
+                            onClick={handlePost}
+                            disabled={!msgText.trim() || sending}
+                            className="p-2 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl text-white disabled:opacity-50"
+                        >
+                            <Send className="w-5 h-5" />
+                        </button>
+                    </div>
+                    <div className={`text-[10px] text-right pr-2 transition-colors ${msgText.length >= 200 ? 'text-red-400 font-bold' : 'text-gray-600'}`}>
+                        {msgText.length}/200
+                    </div>
                 </div>
             </div>
         </main>

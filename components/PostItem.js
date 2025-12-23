@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Trash2, Send } from 'lucide-react';
-import { doc, updateDoc, arrayUnion, arrayRemove, collection, addDoc, onSnapshot, serverTimestamp, query, orderBy, deleteDoc } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, arrayRemove, collection, addDoc, onSnapshot, serverTimestamp, query, orderBy, deleteDoc, increment } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 
 export default function PostItem({ post, chatId, currentUserId, isOwner }) {
@@ -45,6 +45,8 @@ export default function PostItem({ post, chatId, currentUserId, isOwner }) {
 
     const handlePostComment = async () => {
         if (!commentText.trim()) return;
+
+        // 1. Add Comment
         await addDoc(collection(db, "chats", chatId, "posts", post.id, "comments"), {
             text: commentText,
             creatorId: currentUserId,
@@ -52,6 +54,12 @@ export default function PostItem({ post, chatId, currentUserId, isOwner }) {
             creatorPhoto: auth.currentUser?.photoURL || null,
             createdAt: serverTimestamp()
         });
+
+        // 2. Increment Count on Post
+        updateDoc(doc(db, "chats", chatId, "posts", post.id), {
+            commentCount: increment(1)
+        }).catch(e => console.error("Countinc failed", e));
+
         // Notify owner
         if (post.creatorId !== currentUserId) {
             addDoc(collection(db, "users", post.creatorId, "notifications"), {
@@ -72,6 +80,12 @@ export default function PostItem({ post, chatId, currentUserId, isOwner }) {
         if (deletingId === commentId) {
             // Confirmed
             await deleteDoc(doc(db, "chats", chatId, "posts", post.id, "comments", commentId));
+
+            // Decrement Count
+            updateDoc(doc(db, "chats", chatId, "posts", post.id), {
+                commentCount: increment(-1)
+            }).catch(e => console.error("Countdec failed", e));
+
             setDeletingId(null);
         } else {
             // First click
@@ -90,8 +104,6 @@ export default function PostItem({ post, chatId, currentUserId, isOwner }) {
     };
 
     const isMine = post.creatorId === currentUserId;
-    // Strict requirement: "only the user that posts these things can delete them"
-    // Previously allowed chat owner (isOwner) to delete, now restricting to author (isMine).
     const canDeletePost = isMine;
 
     return (
@@ -101,7 +113,9 @@ export default function PostItem({ post, chatId, currentUserId, isOwner }) {
                     {post.creatorPhoto ? (
                         <img src={post.creatorPhoto} alt="" className="w-full h-full object-cover" />
                     ) : (
-                        <div className="w-full h-full flex items-center justify-center text-xs">?</div>
+                        <div className="w-full h-full flex items-center justify-center text-sm font-bold text-white bg-gradient-to-br from-purple-500 to-indigo-500">
+                            {post.creatorName?.[0]?.toUpperCase() || '?'}
+                        </div>
                     )}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -132,7 +146,7 @@ export default function PostItem({ post, chatId, currentUserId, isOwner }) {
                             className={`flex items-center gap-1 transition-colors text-sm ${showComments ? 'text-blue-400' : 'text-gray-400 hover:text-blue-400'}`}
                         >
                             <MessageCircle className="w-4 h-4" />
-                            <span>{comments.length > 0 ? comments.length : 'Comment'}</span>
+                            <span>{post.commentCount || (comments.length > 0 ? comments.length : 0)}</span>
                         </button>
                     </div>
 
@@ -145,10 +159,12 @@ export default function PostItem({ post, chatId, currentUserId, isOwner }) {
                                         {comment.creatorPhoto ? (
                                             <img src={comment.creatorPhoto} alt="" className="w-full h-full object-cover" />
                                         ) : (
-                                            <div className="flex items-center justify-center h-full w-full text-[10px] text-gray-400 cursor-default">?</div>
+                                            <div className="flex items-center justify-center h-full w-full text-[10px] font-bold text-white bg-gray-600">
+                                                {comment.creatorName?.[0]?.toUpperCase() || '?'}
+                                            </div>
                                         )}
                                     </div>
-                                    <div className="flex-1">
+                                    <div className="flex-1 min-w-0">
                                         <div className="flex justify-between">
                                             <span className="font-bold text-purple-200 text-xs">{comment.creatorName}</span>
                                             {(comment.creatorId === currentUserId) && (
@@ -160,23 +176,32 @@ export default function PostItem({ post, chatId, currentUserId, isOwner }) {
                                                 </button>
                                             )}
                                         </div>
-                                        <p className="text-gray-300">{comment.text}</p>
+                                        <p className="text-gray-300 break-words whitespace-pre-wrap">{comment.text}</p>
                                     </div>
                                 </div>
                             ))}
 
-                            <div className="flex items-center gap-2 mt-2">
-                                <input
-                                    type="text"
-                                    value={commentText}
-                                    onChange={(e) => setCommentText(e.target.value)}
-                                    placeholder="Reply..."
-                                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1 text-sm text-white focus:outline-none"
-                                    onKeyDown={e => e.key === 'Enter' && handlePostComment()}
-                                />
-                                <button onClick={handlePostComment} className="text-blue-400 hover:text-white">
-                                    <Send className="w-4 h-4" />
-                                </button>
+                            <div className="flex flex-col gap-1 mt-2 w-full max-w-full">
+                                <div className="flex items-center gap-2 bg-white/5 rounded-xl p-1 border border-white/10">
+                                    <input
+                                        type="text"
+                                        value={commentText}
+                                        onChange={(e) => setCommentText(e.target.value)}
+                                        placeholder="Reply..."
+                                        maxLength={200}
+                                        className="flex-1 min-w-0 bg-transparent border-none focus:outline-none px-3 py-1.5 text-sm text-white placeholder-gray-500"
+                                        onKeyDown={e => e.key === 'Enter' && handlePostComment()}
+                                    />
+                                    <button
+                                        onClick={handlePostComment}
+                                        className="p-1.5 bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 rounded-lg transition-colors shrink-0"
+                                    >
+                                        <Send className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                <div className={`text-[10px] text-right pr-2 transition-colors ${commentText.length >= 200 ? 'text-red-400 font-bold' : 'text-gray-600'}`}>
+                                    {commentText.length}/200
+                                </div>
                             </div>
                         </div>
                     )}

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X, MapPin } from 'lucide-react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { geohashForLocation } from 'geofire-common';
 import { db, auth } from '@/lib/firebase';
 
 // Helper to calculate distance in meters
@@ -53,10 +54,14 @@ export default function CreateChatModal({ isOpen, onClose, userLocation, existin
         try {
             console.log("Attempting to create chat...");
             setCreating(true);
+
+            const hash = geohashForLocation([userLocation.lat, userLocation.lng]);
+
             const chatData = {
                 name: name,
                 lat: userLocation.lat,
                 lng: userLocation.lng,
+                geohash: hash,
                 creatorId: user?.uid || auth.currentUser?.uid || 'anonymous',
                 creatorName: user?.displayName || auth.currentUser?.displayName || 'Anonymous',
                 createdAt: serverTimestamp(),
@@ -121,12 +126,18 @@ export default function CreateChatModal({ isOpen, onClose, userLocation, existin
                     </div>
 
                     <div>
-                        <label className="text-sm text-gray-400 pl-2">Chat Name</label>
+                        <div className="flex justify-between items-center mb-1 pl-2">
+                            <label className="text-sm text-gray-400">Chat Name</label>
+                            <span className={`text-xs ${name.length >= 30 ? 'text-red-400' : 'text-gray-500'}`}>
+                                {name.length}/30
+                            </span>
+                        </div>
                         <input
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            placeholder="e.g. Chill Spot, Event Info..."
+                            maxLength={30}
+                            placeholder="e.g. Chill Spot"
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition-colors"
                             autoFocus
                         />

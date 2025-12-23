@@ -2,23 +2,40 @@
 
 import dynamic from 'next/dynamic';
 import { useState, useEffect, useMemo } from 'react';
-import { User, Plus } from 'lucide-react';
+import { User, Plus, Share2, Users } from 'lucide-react';
 import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
 import UserProfileModal from '@/components/UserProfileModal';
 import CreateChatModal from '@/components/CreateChatModal';
+import WelcomeModal from '@/components/WelcomeModal';
+import ShareModal from '@/components/ShareModal';
+import ShoutsModal from '@/components/ShoutsModal';
 import { useLocation } from '@/hooks/useLocation';
 import { useChats } from '@/hooks/useChats';
+import { deleteChatFully } from '@/lib/db-cleanup';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function Home() {
     const [user, setUser] = useState(null);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isCreateChatOpen, setIsCreateChatOpen] = useState(false);
+    const [isShareOpen, setIsShareOpen] = useState(false);
+    const [isShoutsOpen, setIsShoutsOpen] = useState(false);
     const { location, error: locationError } = useLocation();
-    const { chats, loading: chatsLoading } = useChats();
+    const { chats, loading: chatsLoading } = useChats(location);
     const router = useRouter();
+
+    const [highlightedChats, setHighlightedChats] = useState([]);
+    const [showWelcome, setShowWelcome] = useState(false);
+
+    useEffect(() => {
+        const agreed = localStorage.getItem('geochat_terms_accepted');
+        if (!agreed) {
+            setShowWelcome(true);
+        }
+    }, []);
 
     // Authentication
     useEffect(() => {
@@ -33,8 +50,6 @@ export default function Home() {
     }, []);
 
     // Notification Listener for Map Highlights (Likes/Comments)
-    const [highlightedChats, setHighlightedChats] = useState([]);
-
     useEffect(() => {
         if (!user) return;
 
@@ -54,6 +69,29 @@ export default function Home() {
         });
         return () => unsub();
     }, [user]);
+
+    // Auto-Cleanup Expired Chats (8 Hours) - Note: kept as legacy safety net
+    useEffect(() => {
+        if (!chats.length) return;
+
+        const cleanupExpiredChats = async () => {
+            const now = Date.now();
+            const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+
+            for (const chat of chats) {
+                if (chat.createdAt?.toMillis) {
+                    const elapsed = now - chat.createdAt.toMillis();
+                    if (elapsed > TWENTY_FOUR_HOURS) {
+                        console.log(`Chat ${chat.id} expired (${Math.round(elapsed / 1000 / 60)} mins old). Cleaning up...`);
+                        await deleteChatFully(chat.id);
+                    }
+                }
+            }
+        };
+
+        // Run cleanup on load (and when chats update)
+        cleanupExpiredChats();
+    }, [chats]);
 
     const Map = useMemo(() => dynamic(
         () => import('@/components/Map/Map'),
@@ -84,16 +122,35 @@ export default function Home() {
             />
 
             {/* Top Bar */}
-            <div className="absolute top-4 left-4 right-4 z-[1000] flex justify-between items-start pointer-events-none">
-                {/* Logo */}
-                <div className="glass-panel p-3 px-6 pointer-events-auto">
+            <div className="absolute top-4 left-4 right-4 z-[1000] flex justify-between items-start pointer-events-none gap-2">
+
+                {/* Left: Logo */}
+                <div
+                    onClick={() => window.location.reload()}
+                    className="glass-panel p-3 px-6 pointer-events-auto cursor-pointer hover:scale-105 active:scale-95 transition-transform select-none"
+                >
                     <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600 drop-shadow-sm">
                         Geochat
                     </h1>
                     {locationError && <div className="text-xs text-red-400">Locating failed</div>}
                 </div>
 
-                {/* User Profile Button */}
+                {/* Center: Share Button (Absolutely positioned relative to screen usually, but here inside 'justify-between' flex container) */}
+                {/* To center it on screen, we need it outside the flex or absolutely positioned. */}
+                {/* Let's put it absolutely positioned in the Top Bar container or outside? */}
+                {/* The Top Bar div is 'absolute top-4 left-4 right-4'. */}
+                {/* So 'absolute left-1/2' works relative to that div if it has relative width? No, relative to 'top-4' div. */}
+                <div className="absolute left-1/2 -translate-x-1/2 pointer-events-auto">
+                    <button
+                        onClick={() => setIsShareOpen(true)}
+                        className="glass-panel p-3 hover:bg-white/10 transition-all active:scale-95 group relative overflow-hidden"
+                        title="Share"
+                    >
+                        <Share2 className="w-6 h-6 text-white group-hover:text-pink-400 transition-colors" />
+                    </button>
+                </div>
+
+                {/* Right: Profile Button */}
                 <button
                     onClick={() => setIsProfileOpen(true)}
                     className="glass-panel p-3 hover:bg-white/10 transition-all active:scale-95 pointer-events-auto group relative overflow-hidden"
@@ -102,13 +159,30 @@ export default function Home() {
                     {user?.photoURL ? (
                         <img src={user.photoURL} alt="Profile" className="w-6 h-6 rounded-full object-cover border border-purple-500/50" />
                     ) : (
-                        <User className="w-6 h-6 text-white group-hover:text-purple-300 transition-colors" />
+                        <div className="w-6 h-6 rounded-full border border-purple-500/50 flex items-center justify-center bg-gray-700 text-white text-xs font-bold">
+                            {user?.displayName?.[0]?.toUpperCase() || <User className="w-4 h-4 text-white group-hover:text-purple-300 transition-colors" />}
+                        </div>
                     )}
                 </button>
             </div>
 
-            {/* Floating Action Button (Create Chat) */}
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[1000] pointer-events-auto">
+            {/* Bottom Controls */}
+
+            {/* Bottom Left: Shouts Button */}
+            <div className="absolute bottom-6 left-6 z-[1000] pointer-events-auto">
+                <button
+                    onClick={() => setIsShoutsOpen(true)}
+                    className="glass-panel px-4 py-3 flex items-center gap-2 hover:bg-white/10 transition-all active:scale-95 group"
+                >
+                    <div className="relative">
+                        <Users className="w-6 h-6 text-white group-hover:text-yellow-400 transition-colors" />
+                    </div>
+                    <span className="font-bold text-white text-sm hidden sm:block">Shouts</span>
+                </button>
+            </div>
+
+            {/* Center: Create Chat FAB */}
+            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[1000] pointer-events-auto">
                 <button
                     onClick={() => setIsCreateChatOpen(true)}
                     className="btn-primary w-16 h-16 flex items-center justify-center rounded-full shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 transition-all text-white"
@@ -116,6 +190,19 @@ export default function Home() {
                     <Plus className="w-8 h-8" strokeWidth={3} />
                 </button>
             </div>
+
+            {/* Modals */}
+            <ShoutsModal
+                isOpen={isShoutsOpen}
+                onClose={() => setIsShoutsOpen(false)}
+                userLocation={location}
+                user={user}
+            />
+
+            <ShareModal
+                isOpen={isShareOpen}
+                onClose={() => setIsShareOpen(false)}
+            />
 
             <UserProfileModal
                 isOpen={isProfileOpen}
@@ -129,6 +216,25 @@ export default function Home() {
                 userLocation={location}
                 existingChats={chats}
                 user={user}
+            />
+
+            <WelcomeModal
+                isOpen={showWelcome}
+                onAgree={async () => {
+                    localStorage.setItem('geochat_terms_accepted', 'true');
+                    setShowWelcome(false);
+
+                    if (user) {
+                        try {
+                            await updateDoc(doc(db, "users", user.uid), {
+                                termsAccepted: true,
+                                termsAcceptedAt: serverTimestamp()
+                            });
+                        } catch (e) {
+                            console.error("Error saving terms acceptance", e);
+                        }
+                    }
+                }}
             />
         </main>
     );
