@@ -1,22 +1,54 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { collection, query, onSnapshot, orderBy, startAt, endAt } from 'firebase/firestore';
 import { geohashQueryBounds, distanceBetween } from 'geofire-common';
 import { db } from '@/lib/firebase';
 
 const QUERY_RADIUS_M = 50 * 1000; // 50km radius for fetching chats
+const REFETCH_DISTANCE_THRESHOLD_M = 500; // Only re-fetch if moved 500m
 
 export function useChats(userLocation) {
     const [chats, setChats] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    // Throttling State: "Where did we last query from?"
+    const [queryCenter, setQueryCenter] = useState(null);
+
+    // Effect 1: Smart Throttling
+    // Decides IF we should update the queryCenter
     useEffect(() => {
-        if (!userLocation) {
+        if (!userLocation) return;
+
+        // Initial Load
+        if (!queryCenter) {
+            setQueryCenter({ lat: userLocation.lat, lng: userLocation.lng });
+            return;
+        }
+
+        // Calculate distance moved
+        const distKm = distanceBetween(
+            [userLocation.lat, userLocation.lng],
+            [queryCenter.lat, queryCenter.lng]
+        );
+        const distM = distKm * 1000;
+
+        // If moved significantly, pivot the query center
+        if (distM > REFETCH_DISTANCE_THRESHOLD_M) {
+            console.log(`User moved ${Math.round(distM)}m. Refetching chats...`);
+            setQueryCenter({ lat: userLocation.lat, lng: userLocation.lng });
+        }
+    }, [userLocation?.lat, userLocation?.lng]);
+
+    // Effect 2: The Expensive Listener
+    // Depends on 'queryCenter', NOT 'userLocation'
+    useEffect(() => {
+        if (!queryCenter) {
             setChats([]);
             setLoading(false);
             return;
         }
 
-        const center = [userLocation.lat, userLocation.lng];
+        setLoading(true);
+        const center = [queryCenter.lat, queryCenter.lng];
         const bounds = geohashQueryBounds(center, QUERY_RADIUS_M);
 
         const listeners = [];
@@ -32,13 +64,15 @@ export function useChats(userLocation) {
             allDocs.forEach(doc => {
                 const data = doc.data();
 
-                // Client-side filtering check
-                // (Optional: Re-check distance if needed for strictness, but geohash is usually close enough for "Lite")
-                // Let's rely on Geofire bounds mostly, but maybe strict filter if we want circular exactness.
+                // Check distance from the LIVE user location (if available) or Query Center?
+                // Using Query Center ensures consistency with the query bounds.
+                // But for UI "nearby" check, we might want userLocation.
+                // However, for fetching, we use center.
+
                 const distanceInKm = distanceBetween([data.lat, data.lng], center);
                 const distanceInM = distanceInKm * 1000;
 
-                // Check TTL (24 hours)
+                // Check TTL (24 hours) - Client side safety
                 const now = Date.now();
                 const createdAt = data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.createdAt || 0);
                 const isExpired = (now - createdAt) > (24 * 60 * 60 * 1000);
@@ -66,7 +100,6 @@ export function useChats(userLocation) {
                 updateState();
             }, (error) => {
                 console.error(`Error fetching chats for bound ${index}:`, error);
-                // Don't kill the whole app, just log
             });
             listeners.push(unsubscribe);
         });
@@ -74,24 +107,8 @@ export function useChats(userLocation) {
         return () => {
             listeners.forEach(unsub => unsub());
         };
-    }, [userLocation?.lat, userLocation?.lng]);
-    // Dependency on lat/lng ensures we re-subscribe when moving significantly.
+    }, [queryCenter?.lat, queryCenter?.lng]); // Only re-run if queryCenter moves
 
     return { chats, loading };
 }
-
-// Better Implementation for handling multiple listeners result merging:
-/*
-  We need to know which docs belong to which bound query to correctly handle "removals".
-  But since this is a "Lite" refactor, let's keep it simple: 
-  If the user moves, we reset.
-  If a chat is added, it appears.
-  If a chat is deleted... effectively handling deletions with multiple merged snapshots is tricky 
-  without a robust reducer. Use a simpler approach: 
-  
-  Just fetch fully on move (loading...) or accept that deletions might lag until refresh 
-  unless we structure it carefully.
-  
-  Let's use a ref to store the state of each bound index.
-*/
 
