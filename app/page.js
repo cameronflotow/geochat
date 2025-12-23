@@ -113,7 +113,7 @@ export default function Home() {
     };
 
     return (
-        <main className="w-screen h-screen relative overflow-hidden bg-black">
+        <main className="w-screen h-[100dvh] relative overflow-hidden bg-black">
             <Map
                 userLocation={location}
                 chats={chats}
@@ -135,11 +135,7 @@ export default function Home() {
                     {locationError && <div className="text-xs text-red-400">Locating failed</div>}
                 </div>
 
-                {/* Center: Share Button (Absolutely positioned relative to screen usually, but here inside 'justify-between' flex container) */}
-                {/* To center it on screen, we need it outside the flex or absolutely positioned. */}
-                {/* Let's put it absolutely positioned in the Top Bar container or outside? */}
-                {/* The Top Bar div is 'absolute top-4 left-4 right-4'. */}
-                {/* So 'absolute left-1/2' works relative to that div if it has relative width? No, relative to 'top-4' div. */}
+                {/* Center: Share Button */}
                 <div className="absolute left-1/2 -translate-x-1/2 pointer-events-auto">
                     <button
                         onClick={() => setIsShareOpen(true)}
@@ -166,10 +162,10 @@ export default function Home() {
                 </button>
             </div>
 
-            {/* Bottom Controls */}
+            {/* Bottom Controls - Fixed to Viewport */}
 
             {/* Bottom Left: Shouts Button */}
-            <div className="absolute bottom-8 left-4 z-[1000] pointer-events-auto pb-safe">
+            <div className="fixed bottom-8 left-4 z-[1000] pointer-events-auto pb-safe">
                 <button
                     onClick={() => setIsShoutsOpen(true)}
                     className="glass-panel px-4 py-3 flex items-center gap-2 hover:bg-white/10 transition-all active:scale-95 group"
@@ -182,7 +178,7 @@ export default function Home() {
             </div>
 
             {/* Center: Create Chat FAB */}
-            <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[1000] pointer-events-auto">
+            <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[1000] pointer-events-auto">
                 <button
                     onClick={() => setIsCreateChatOpen(true)}
                     className="btn-primary w-16 h-16 flex items-center justify-center rounded-full shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 transition-all text-white"
