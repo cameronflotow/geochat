@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { X, Camera, Loader2, Save, LogOut, Trash2, Crown, Check, ChevronRight } from 'lucide-react';
-import { updateProfile, GoogleAuthProvider, signInWithPopup, signOut, deleteUser } from 'firebase/auth';
+import { updateProfile, GoogleAuthProvider, FacebookAuthProvider, signInWithPopup, signOut, deleteUser } from 'firebase/auth';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, onSnapshot, deleteDoc } from 'firebase/firestore';
 import { auth, storage, db } from '@/lib/firebase';
@@ -76,6 +76,16 @@ export default function UserProfileModal({ isOpen, onClose, user }) {
         } catch (e) { alert(e.message); }
     };
 
+    const handleFacebookLogin = async () => {
+        try {
+            await signInWithPopup(auth, new FacebookAuthProvider());
+        } catch (e) { alert("Facebook Login Error: " + e.message); }
+    };
+
+    const handlePlaceholderLogin = (provider) => {
+        alert(`${provider} Login is coming soon! This requires business verification.`);
+    };
+
     const handleDeleteAccount = async () => {
         if (!confirm("⚠️ PERMANENTLY DELETE ACCOUNT?\n\nThis will cancel subscriptions and wipe data.")) return;
         try {
@@ -146,9 +156,23 @@ export default function UserProfileModal({ isOpen, onClose, user }) {
                         <div className="flex items-center gap-2">
                             <span className="text-xs text-gray-500 font-medium">SAVE YOUR ACCOUNT</span>
                         </div>
-                        <button onClick={handleGoogleLogin} className="w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-gray-200">
+
+                        <button onClick={handleGoogleLogin} className="w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-gray-200 transaction-colors">
                             <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="G" /> Continue with Google
                         </button>
+
+                        <button onClick={handleFacebookLogin} className="w-full py-3 bg-[#1877F2] text-white font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-[#1559b3] transition-colors">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/2021_Facebook_icon.svg/2048px-2021_Facebook_icon.svg.png" className="w-5 h-5 bg-white rounded-full border border-white" alt="F" /> Continue with Facebook
+                        </button>
+
+                        <div className="flex gap-2">
+                            <button onClick={() => handlePlaceholderLogin('Instagram')} className="flex-1 py-3 bg-gradient-to-tr from-[#FFDC80] via-[#FD1D1D] to-[#E1306C] text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+                                <span className="text-sm">Instagram</span>
+                            </button>
+                            <button onClick={() => handlePlaceholderLogin('TikTok')} className="flex-1 py-3 bg-black border border-white/20 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-gray-900 transition-colors">
+                                <span className="text-sm">TikTok</span>
+                            </button>
+                        </div>
                     </div>
                 ) : (
                     // 4. Upgrade Button (Only if NOT anonymous)
