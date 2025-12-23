@@ -169,7 +169,7 @@ export default function Home() {
             {/* Bottom Controls */}
 
             {/* Bottom Left: Shouts Button */}
-            <div className="absolute bottom-6 left-6 z-[1000] pointer-events-auto">
+            <div className="absolute bottom-8 left-4 z-[1000] pointer-events-auto pb-safe">
                 <button
                     onClick={() => setIsShoutsOpen(true)}
                     className="glass-panel px-4 py-3 flex items-center gap-2 hover:bg-white/10 transition-all active:scale-95 group"
@@ -177,7 +177,7 @@ export default function Home() {
                     <div className="relative">
                         <Users className="w-6 h-6 text-white group-hover:text-yellow-400 transition-colors" />
                     </div>
-                    <span className="font-bold text-white text-sm hidden sm:block">Shouts</span>
+                    <span className="font-bold text-white text-sm">Shouts</span>
                 </button>
             </div>
 
