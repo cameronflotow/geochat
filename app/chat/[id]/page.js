@@ -11,6 +11,7 @@ import { usePosts } from '@/hooks/usePosts';
 import UserProfileModal from '@/components/UserProfileModal';
 import PostItem from '@/components/PostItem';
 import PeopleListModal from '@/components/PeopleListModal';
+import ConversationsModal from '@/components/ConversationsModal'; // Added missing import
 import { deleteChatFully, deletePostFully } from '@/lib/db-cleanup';
 
 export default function ChatPage({ params }) {
@@ -24,6 +25,7 @@ export default function ChatPage({ params }) {
     const [sending, setSending] = useState(false);
     const [user, setUser] = useState(null); // Initialize null
     const [isPeopleOpen, setIsPeopleOpen] = useState(false);
+    const [isConversationsOpen, setIsConversationsOpen] = useState(false); // Added missing state
     const [unreadUserIds, setUnreadUserIds] = useState(new Set());
 
     // Auth Listener to ensure user is loaded on refresh
