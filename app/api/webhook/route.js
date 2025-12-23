@@ -43,6 +43,11 @@ import { doc, updateDoc, getFirestore } from 'firebase/firestore';
 import { adminDb } from '@/lib/firebase-admin';
 
 export async function POST(req) {
+    if (!adminDb) {
+        console.error("Firebase Admin not initialized. Cannot process webhook.");
+        return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
+    }
+
     const body = await req.text();
     const signature = (await headers()).get('stripe-signature');
 
