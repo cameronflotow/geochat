@@ -188,7 +188,7 @@ export default function ShoutsModal({ isOpen, onClose, userLocation, user }) {
                                 onKeyDown={(e) => e.key === 'Enter' && handlePostCapped(text)}
                             />
                             <div className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded-md text-[10px] font-medium text-gray-500">
-                                <span className={text.length >= 200 ? 'text-red-400' : ''}>{text.length}</span>
+                                <span className={text.length >= 200 ? 'text-red-400' : ''}>{text.length}</span>/200
                             </div>
                         </div>
 
