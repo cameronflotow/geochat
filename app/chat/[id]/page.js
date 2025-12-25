@@ -317,33 +317,36 @@ export default function ChatPage({ params }) {
             <div className="w-full bg-black/80 backdrop-blur-md p-4 border-t border-white/10 flex-none z-20 pb-safe-area-inset-bottom">
                 {/* Emoji Picker Popover */}
                 {showEmojiPicker && (
-                    <div className="absolute bottom-24 left-4 mb-2 w-64 animate-in slide-in-from-bottom-2 duration-200 z-30">
-                        <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-2xl p-3 shadow-2xl">
-                            <div className="flex justify-between items-center mb-2 px-1">
-                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Choose Style</span>
-                                <button onClick={() => setShowEmojiPicker(false)} className="text-gray-500 hover:text-white"><X className="w-3 h-3" /></button>
-                            </div>
-                            <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                                <EmojiInventoryGrid userId={user?.uid} />
+                    <>
+                        <div className="fixed inset-0 z-20" onClick={() => setShowEmojiPicker(false)} />
+                        <div className="absolute bottom-24 left-4 mb-2 w-64 animate-in slide-in-from-bottom-2 duration-200 z-30">
+                            <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-2xl p-3 shadow-2xl">
+                                <div className="flex justify-between items-center mb-2 px-1">
+                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Choose Style</span>
+                                    <button onClick={() => setShowEmojiPicker(false)} className="text-gray-500 hover:text-white"><X className="w-3 h-3" /></button>
+                                </div>
+                                <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                                    <EmojiInventoryGrid userId={user?.uid} />
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </>
                 )}
                 <div className="flex flex-col gap-1 w-full">
-                    <div className="flex items-center gap-2 bg-white/5 rounded-2xl p-2 border border-white/10">
+                    <div className="flex items-center gap-1 bg-white/5 rounded-2xl p-2 border border-white/10">
                         <input
                             type="text"
                             value={msgText}
                             onChange={e => setMsgText(e.target.value)}
                             placeholder="Drop a message..."
                             maxLength={200}
-                            className="flex-1 bg-transparent border-none focus:outline-none px-2 text-white placeholder-gray-500"
+                            className="flex-1 bg-transparent border-none focus:outline-none px-2 text-white placeholder-gray-500 min-w-0"
                             onKeyDown={e => e.key === 'Enter' && handlePost()}
                         />
 
                         <button
                             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                            className={`p-2 rounded-xl transition-all active:scale-95 flex items-center justify-center 
+                            className={`p-2 rounded-xl transition-all active:scale-95 flex items-center justify-center shrink-0
                                 ${showEmojiPicker ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20' : 'bg-transparent text-gray-400 hover:text-white hover:bg-white/10'}`}
                         >
                             <Smile className="w-5 h-5" />
@@ -352,7 +355,7 @@ export default function ChatPage({ params }) {
                         <button
                             onClick={handlePost}
                             disabled={!msgText.trim() || sending}
-                            className="p-2 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl text-white disabled:opacity-50"
+                            className="p-2 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl text-white disabled:opacity-50 shrink-0"
                         >
                             <Send className="w-5 h-5" />
                         </button>

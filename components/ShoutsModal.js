@@ -144,22 +144,24 @@ export default function ShoutsModal({ isOpen, onClose, userLocation, user }) {
                     )}
                 </div>
 
-                {/* Input Area */}
                 <div className="p-4 bg-black/40 border-t border-white/10 backdrop-blur-md relative z-20">
 
                     {/* Emoji Picker Popover */}
                     {showEmojiPicker && (
-                        <div className="absolute bottom-full left-4 mb-2 w-64 animate-in slide-in-from-bottom-2 duration-200 z-30">
-                            <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-2xl p-3 shadow-2xl">
-                                <div className="flex justify-between items-center mb-2 px-1">
-                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Choose Style</span>
-                                    <button onClick={() => setShowEmojiPicker(false)} className="text-gray-500 hover:text-white"><X className="w-3 h-3" /></button>
-                                </div>
-                                <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                                    <EmojiInventoryGrid userId={user?.uid} />
+                        <>
+                            <div className="fixed inset-0 z-40" onClick={() => setShowEmojiPicker(false)} />
+                            <div className="absolute bottom-full left-4 mb-2 w-64 animate-in slide-in-from-bottom-2 duration-200 z-50">
+                                <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-2xl p-3 shadow-2xl">
+                                    <div className="flex justify-between items-center mb-2 px-1">
+                                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Choose Style</span>
+                                        <button onClick={() => setShowEmojiPicker(false)} className="text-gray-500 hover:text-white"><X className="w-3 h-3" /></button>
+                                    </div>
+                                    <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                                        <EmojiInventoryGrid userId={user?.uid} />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        </>
                     )}
 
                     <div className="flex items-center gap-2 mb-2 px-1">
@@ -175,24 +177,24 @@ export default function ShoutsModal({ isOpen, onClose, userLocation, user }) {
                         </button>
                     </div>
 
-                    <div className="relative flex gap-2">
-                        <div className="relative flex-1 group">
+                    <div className="relative flex gap-1 items-end">
+                        <div className="relative flex-1 group min-w-0">
                             <input
                                 value={text}
                                 onChange={(e) => setText(e.target.value)}
                                 placeholder="Shout something..."
                                 maxLength={200}
-                                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-5 pr-14 py-3.5 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all"
+                                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-4 pr-12 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all font-medium"
                                 onKeyDown={(e) => e.key === 'Enter' && handlePostCapped(text)}
                             />
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-1 rounded-md bg-black/20 text-[10px] font-medium text-gray-500 border border-white/5">
-                                <span className={text.length >= 200 ? 'text-red-400' : ''}>{text.length}</span>/200
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded-md text-[10px] font-medium text-gray-500">
+                                <span className={text.length >= 200 ? 'text-red-400' : ''}>{text.length}</span>
                             </div>
                         </div>
 
                         <button
                             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                            className={`p-3.5 rounded-2xl transition-all duration-200 hover:scale-105 active:scale-95 ${showEmojiPicker ? 'bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]' : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white'}`}
+                            className={`p-2 rounded-2xl transition-all duration-200 hover:scale-105 active:scale-95 shrink-0 ${showEmojiPicker ? 'bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]' : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white'}`}
                         >
                             <Smile className="w-6 h-6" />
                         </button>
@@ -200,9 +202,9 @@ export default function ShoutsModal({ isOpen, onClose, userLocation, user }) {
                         <button
                             onClick={() => handlePostCapped(text)}
                             disabled={!text.trim() || sending}
-                            className="p-3.5 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-2xl text-white shadow-lg shadow-purple-500/20 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all duration-200"
+                            className="p-2 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-2xl text-white shadow-lg shadow-purple-500/20 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all duration-200 shrink-0"
                         >
-                            {sending ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Megaphone className="w-6 h-6" />}
+                            {sending ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Megaphone className="w-6 h-6" />}
                         </button>
                     </div>
                 </div>

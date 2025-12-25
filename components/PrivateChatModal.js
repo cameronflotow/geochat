@@ -147,17 +147,20 @@ export default function PrivateChatModal({ isOpen, onClose, conversationId, othe
                 <div className="mt-3 pt-3 border-t border-white/10 shrink-0 relative z-20">
                     {/* Emoji Picker */}
                     {showEmojiPicker && (
-                        <div className="absolute bottom-full left-0 mb-2 w-64 animate-in slide-in-from-bottom-2 duration-200 z-30">
-                            <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-2xl p-3 shadow-2xl">
-                                <div className="flex justify-between items-center mb-2 px-1">
-                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Choose Style</span>
-                                    <button onClick={() => setShowEmojiPicker(false)} className="text-gray-500 hover:text-white"><X className="w-3 h-3" /></button>
-                                </div>
-                                <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                                    <EmojiInventoryGrid userId={currentUserId} />
+                        <>
+                            <div className="fixed inset-0 z-40" onClick={() => setShowEmojiPicker(false)} />
+                            <div className="absolute bottom-full left-0 mb-2 w-64 animate-in slide-in-from-bottom-2 duration-200 z-50">
+                                <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-2xl p-3 shadow-2xl">
+                                    <div className="flex justify-between items-center mb-2 px-1">
+                                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Choose Style</span>
+                                        <button onClick={() => setShowEmojiPicker(false)} className="text-gray-500 hover:text-white"><X className="w-3 h-3" /></button>
+                                    </div>
+                                    <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                                        <EmojiInventoryGrid userId={currentUserId} />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        </>
                     )}
 
                     {/* Status Indicator */}
@@ -171,9 +174,9 @@ export default function PrivateChatModal({ isOpen, onClose, conversationId, othe
                         </div>
                     )}
 
-                    <div className="flex gap-2 items-end">
+                    <div className="flex gap-1 items-end">
                         <input
-                            className={`flex-1 bg-white/5 rounded-2xl px-4 py-3 border text-sm focus:outline-none transition-all
+                            className={`flex-1 min-w-0 bg-white/5 rounded-2xl px-4 py-3 border text-sm focus:outline-none transition-all
                                 ${canSend
                                     ? 'border-white/10 focus:border-purple-500/50 focus:bg-white/10 text-white'
                                     : 'border-transparent bg-black/20 text-gray-500 cursor-not-allowed opacity-50'
@@ -187,7 +190,7 @@ export default function PrivateChatModal({ isOpen, onClose, conversationId, othe
                         />
                         <button
                             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                            className={`p-3 rounded-xl transition-all active:scale-95 flex items-center justify-center border border-white/5
+                            className={`p-2 rounded-xl transition-all active:scale-95 flex items-center justify-center border border-white/5 shrink-0
                                 ${showEmojiPicker ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20' : 'bg-black/20 text-gray-400 hover:text-white hover:bg-white/10'}`}
                         >
                             <Smile className="w-5 h-5" />
@@ -195,7 +198,7 @@ export default function PrivateChatModal({ isOpen, onClose, conversationId, othe
                         <button
                             onClick={handleSend}
                             disabled={!text.trim() || !canSend}
-                            className="p-3 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-xl text-white shadow-lg shadow-purple-500/20 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95 flex items-center justify-center"
+                            className="p-2 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-xl text-white shadow-lg shadow-purple-500/20 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95 flex items-center justify-center shrink-0"
                         >
                             <Send className="w-5 h-5" />
                         </button>
