@@ -100,27 +100,31 @@ body {
 
 @keyframes pulse-color {
   0% {
-    fill: #9d4edd;
-    stroke: #9d4edd;
-    fill-opacity: 0.2;
-    stroke-opacity: 0.5;
+    fill: #ff00ff !important;
+    stroke: #ff00ff !important;
+    fill-opacity: 0.7 !important;
+    stroke-opacity: 1 !important;
   }
 
   50% {
-    fill: #ff00ff;
-    stroke: #ff00ff;
-    fill-opacity: 0.7;
-    stroke-opacity: 1;
+    fill: #9d4edd !important;
+    stroke: #9d4edd !important;
+    fill-opacity: 0.4 !important;
+    stroke-opacity: 0.8 !important;
   }
 
   100% {
-    fill: #9d4edd;
-    stroke: #9d4edd;
-    fill-opacity: 0.2;
-    stroke-opacity: 0.5;
+    fill: #ff00ff !important;
+    stroke: #ff00ff !important;
+    fill-opacity: 0.7 !important;
+    stroke-opacity: 1 !important;
   }
 }
 
-.animate-pulse-color {
+path.animate-pulse-color {
   animation: pulse-color 1.5s infinite ease-in-out !important;
+  transform-origin: center;
+  fill: #ff00ff !important;
+  /* Fallback */
+  stroke: #ff00ff !important;
 }

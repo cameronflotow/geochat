@@ -3,7 +3,7 @@ import { collection, query, onSnapshot, orderBy, startAt, endAt, limit } from 'f
 import { geohashQueryBounds, distanceBetween } from 'geofire-common';
 import { db } from '@/lib/firebase';
 
-const SHOUT_RADIUS_M = 4 * 1609.34; // 4 miles in meters (~6437m)
+const SHOUT_RADIUS_M = 1 * 1609.34; // 1 mile in meters (~1609m)
 
 export function useShouts(userLocation) {
     const [shouts, setShouts] = useState([]);
@@ -29,6 +29,8 @@ export function useShouts(userLocation) {
             const uniqueMap = new Map();
             allDocs.forEach(doc => {
                 const data = doc.data();
+                if (!data.lat || !data.lng) return;
+
                 const distanceInM = distanceBetween([data.lat, data.lng], center) * 1000;
 
                 // TTL Check (24h)

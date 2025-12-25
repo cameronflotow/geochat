@@ -2,7 +2,9 @@
 
 import dynamic from 'next/dynamic';
 import { useState, useEffect, useMemo } from 'react';
-import { User, Plus, Share2, Users } from 'lucide-react';
+import { Plus, MapPin, User, Settings, Sparkles, Navigation, X, Megaphone, Grab, Share2, Smile } from 'lucide-react';
+
+
 import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
@@ -14,21 +16,34 @@ import ShareModal from '@/components/ShareModal';
 import ShoutsModal from '@/components/ShoutsModal';
 import { useLocation } from '@/hooks/useLocation';
 import { useChats } from '@/hooks/useChats';
+import { useShouts } from '@/hooks/useShouts';
 import { deleteChatFully } from '@/lib/db-cleanup';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useEmojiSystem } from '@/hooks/useEmojiSystem';
 
 export default function Home() {
     const [user, setUser] = useState(null);
+    const [userData, setUserData] = useState(null);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isCreateChatOpen, setIsCreateChatOpen] = useState(false);
     const [isShareOpen, setIsShareOpen] = useState(false);
     const [isShoutsOpen, setIsShoutsOpen] = useState(false);
     const { location, error: locationError } = useLocation();
     const { chats, loading: chatsLoading } = useChats(location);
+    const { shouts } = useShouts(location);
+    const { nearbyItems, canCollectItem, collectItem } = useEmojiSystem(location, user);
     const router = useRouter();
 
     const [highlightedChats, setHighlightedChats] = useState([]);
     const [showWelcome, setShowWelcome] = useState(false);
+    const [notification, setNotification] = useState(null);
+
+    useEffect(() => {
+        if (notification) {
+            const timer = setTimeout(() => setNotification(null), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [notification]);
 
     useEffect(() => {
         const agreed = localStorage.getItem('geochat_terms_accepted');
@@ -48,6 +63,32 @@ export default function Home() {
         });
         return () => unsubscribe();
     }, []);
+
+    // Listen to User Profile
+    useEffect(() => {
+        if (!user) return;
+        const unsub = onSnapshot(doc(db, "users", user.uid), (snapshot) => {
+            if (snapshot.exists()) {
+                const data = snapshot.data();
+                setUserData(data);
+
+                // SEED DEFAULTS: If missing 'Single' (marker for starter pack), add them.
+                if (!data.inventory || !data.inventory['Single']) {
+                    setDoc(doc(db, "users", user.uid), {
+                        inventory: {
+                            'Single': 1,
+                            'Taken': 1,
+                            'Complicated': 1,
+                            'Adventurous': 1,
+                            'Wants 🍺': 1,
+                            'Wants 💬': 1
+                        }
+                    }, { merge: true }).catch(e => console.log("Seeding failed", e));
+                }
+            }
+        });
+        return () => unsub();
+    }, [user]);
 
     // Notification Listener for Map Highlights (Likes/Comments)
     useEffect(() => {
@@ -105,20 +146,49 @@ export default function Home() {
         if (isActive) {
             router.push(`/chat/${chat.id}`);
         } else {
-            // Verify distance nicely? Or just tell them to get closer.
-            // Map component already calculated it, 'isActive' is true if inside.
-            // 2025: Relaxed slightly or maybe they drifted.
-            alert(`You are too far from "${chat.name}" to enter! Get closer.`);
+            setNotification({
+                type: 'error',
+                message: `Too far from "${chat.name}"! Get closer to enter.`
+            });
         }
     };
+
+    const handleCatch = async () => {
+        const success = await collectItem();
+        if (success) {
+            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3');
+            audio.volume = 0.5;
+            audio.play().catch(e => console.log("Audio play failed", e));
+        } else {
+            setNotification({
+                type: 'error',
+                message: "Too slow! It got away."
+            });
+        }
+    };
+
+    const handleTooFar = () => {
+        setNotification({
+            type: 'error',
+            message: "Not close enough! Move closer to catch."
+        });
+    };
+
+
 
     return (
         <main className="w-screen h-[100dvh] relative overflow-hidden bg-black">
             <Map
                 userLocation={location}
                 chats={chats}
+                shouts={shouts}
+                currentUser={user}
                 onChatClick={handleChatClick}
                 highlightedChatIds={highlightedChats}
+                mapItems={nearbyItems}
+                canCollectItem={canCollectItem}
+                onCollectItem={handleCatch}
+                onTooFarClick={handleTooFar}
             />
 
             {/* Top Bar */}
@@ -147,19 +217,22 @@ export default function Home() {
                 </div>
 
                 {/* Right: Profile Button */}
-                <button
-                    onClick={() => setIsProfileOpen(true)}
-                    className="glass-panel p-3 hover:bg-white/10 transition-all active:scale-95 pointer-events-auto group relative overflow-hidden"
-                    title="User Profile"
-                >
-                    {user?.photoURL ? (
-                        <img src={user.photoURL} alt="Profile" className="w-6 h-6 rounded-full object-cover border border-purple-500/50" />
-                    ) : (
-                        <div className="w-6 h-6 rounded-full border border-purple-500/50 flex items-center justify-center bg-gray-700 text-white text-xs font-bold">
-                            {user?.displayName?.[0]?.toUpperCase() || <User className="w-4 h-4 text-white group-hover:text-purple-300 transition-colors" />}
-                        </div>
-                    )}
-                </button>
+                <div className="flex flex-col items-center pointer-events-auto">
+                    <button
+                        onClick={() => setIsProfileOpen(true)}
+                        className="glass-panel p-3 hover:bg-white/10 transition-all active:scale-95 group relative overflow-hidden mb-1"
+                        title="User Profile"
+                    >
+                        {user?.photoURL ? (
+                            <img src={user.photoURL} alt="Profile" className="w-6 h-6 rounded-full object-cover border border-purple-500/50" />
+                        ) : (
+                            <div className="w-6 h-6 rounded-full border border-purple-500/50 flex items-center justify-center bg-gray-700 text-white text-xs font-bold">
+                                {user?.displayName?.[0]?.toUpperCase() || <User className="w-4 h-4 text-white group-hover:text-purple-300 transition-colors" />}
+                            </div>
+                        )}
+                    </button>
+                    {!user?.isAnonymous && <span className="text-[9px] text-gray-400 font-medium">Update Profile</span>}
+                </div>
             </div>
 
             {/* Bottom Controls - Fixed to Viewport */}
@@ -168,14 +241,14 @@ export default function Home() {
             <div className="fixed bottom-8 left-4 z-[1000] pointer-events-auto pb-safe">
                 <button
                     onClick={() => setIsShoutsOpen(true)}
-                    className="glass-panel px-4 py-3 flex items-center gap-2 hover:bg-white/10 transition-all active:scale-95 group"
+                    className="glass-panel p-4 flex items-center justify-center hover:bg-white/10 transition-all active:scale-95 group rounded-full"
+                    title="Local Shouts"
                 >
-                    <div className="relative">
-                        <Users className="w-6 h-6 text-white group-hover:text-yellow-400 transition-colors" />
-                    </div>
-                    <span className="font-bold text-white text-sm">Shouts</span>
+                    <Megaphone className="w-6 h-6 text-white group-hover:text-yellow-400 transition-colors" />
                 </button>
             </div>
+
+
 
             {/* Center: Create Chat FAB */}
             <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[1000] pointer-events-auto">
@@ -206,6 +279,8 @@ export default function Home() {
                 user={user}
             />
 
+
+
             <CreateChatModal
                 isOpen={isCreateChatOpen}
                 onClose={() => setIsCreateChatOpen(false)}
@@ -232,6 +307,20 @@ export default function Home() {
                     }
                 }}
             />
+
+            {/* Notifications / Toasts */}
+            {notification && (
+                <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[2000] pointer-events-none animate-in fade-in slide-in-from-top-4 duration-300">
+                    <div className="glass-panel px-6 py-3 rounded-2xl border border-white/10 shadow-2xl flex items-center gap-3 backdrop-blur-xl bg-black/60">
+                        {notification.type === 'error' ? (
+                            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                        ) : (
+                            <div className="w-2 h-2 rounded-full bg-blue-500" />
+                        )}
+                        <span className="text-white font-medium text-sm drop-shadow-md">{notification.message}</span>
+                    </div>
+                </div>
+            )}
         </main>
     );
 }

@@ -2,61 +2,102 @@
 
 import { useState, useEffect } from 'react';
 import { X, MessageSquare, Trash2 } from 'lucide-react';
-import { collection, query, where, onSnapshot, orderBy, addDoc, getDocs, serverTimestamp, setDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, addDoc, getDocs, serverTimestamp, setDoc, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
-import PrivateChatModal from './PrivateChatModalV2';
+import PrivateChatModal from './PrivateChatModal';
 
 export default function PeopleListModal({ isOpen, onClose, chatId, currentUserId, isCreator, creatorId, onDeleteChat, unreadUserIds = new Set() }) {
-    const [users, setUsers] = useState([]);
+    const [presenceUsers, setPresenceUsers] = useState([]);
+    const [offlineUsers, setOfflineUsers] = useState([]);
     const [selectedUser, setSelectedUser] = useState(null);
     const [isPrivateChatOpen, setIsPrivateChatOpen] = useState(false);
     const [conversationId, setConversationId] = useState(null);
     const [confirmDelete, setConfirmDelete] = useState(false);
 
     // Debug Log
-    console.log("DEBUG PeopleListModal:", { isCreator, currentUserId });
+    console.log("DEBUG PeopleListModal:", { isCreator, currentUserId, unreadCount: unreadUserIds.size });
 
+    // 1. Listen to Presence (Online Users)
     useEffect(() => {
         if (!isOpen || !chatId) return;
 
-        // Listen to presence
-        // Ideally we filter by lastSeen > 5 mins ago, but client side filtering is easier for now
         const q = query(collection(db, "chats", chatId, "presence"), orderBy("lastSeen", "desc"));
         const unsub = onSnapshot(q, (snap) => {
             const active = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-            // Sort: Unread first, then by lastSeen
-            active.sort((a, b) => {
-                const aUnread = unreadUserIds.has(a.uid);
-                const bUnread = unreadUserIds.has(b.uid);
-                if (aUnread && !bUnread) return -1;
-                if (!aUnread && bUnread) return 1;
-                return b.lastSeen?.seconds - a.lastSeen?.seconds;
-            });
-
-            // Filter out users who haven't updated presence in > 5 minutes
+            // Filter out stale users (> 5 mins)
             const now = Date.now();
             const FIVE_MINUTES = 5 * 60 * 1000;
-
             const recent = active.filter(u => {
                 if (!u.lastSeen?.toMillis) return false;
                 return (now - u.lastSeen.toMillis()) < FIVE_MINUTES;
             });
 
-            setUsers(recent);
+            setPresenceUsers(recent);
         });
         return () => unsub();
-    }, [isOpen, chatId, unreadUserIds]);
+    }, [isOpen, chatId]);
+
+    // 2. Fetch Missing Users (Unread but Offline/Away)
+    useEffect(() => {
+        if (!isOpen || unreadUserIds.size === 0) {
+            setOfflineUsers([]);
+            return;
+        }
+
+        const fetchMissing = async () => {
+            const onlineIds = new Set(presenceUsers.map(u => u.uid));
+            const missingIds = Array.from(unreadUserIds).filter(uid => !onlineIds.has(uid));
+
+            if (missingIds.length === 0) {
+                setOfflineUsers([]);
+                return;
+            }
+
+            try {
+                const fetched = await Promise.all(
+                    missingIds.map(async (uid) => {
+                        const snap = await getDoc(doc(db, "users", uid));
+                        if (snap.exists()) {
+                            return { uid: snap.id, ...snap.data(), isOffline: true };
+                        }
+                        return null;
+                    })
+                );
+                setOfflineUsers(fetched.filter(Boolean));
+            } catch (e) {
+                console.error("Error fetching offline users:", e);
+            }
+        };
+
+        fetchMissing();
+    }, [isOpen, unreadUserIds, presenceUsers]);
+
+    // 3. Combine & Sort
+    const allUsers = [...presenceUsers, ...offlineUsers].sort((a, b) => {
+        const aUnread = unreadUserIds.has(a.uid);
+        const bUnread = unreadUserIds.has(b.uid);
+        if (aUnread && !bUnread) return -1; // Unread first
+        if (!aUnread && bUnread) return 1;
+        // Then by online status
+        if (!a.isOffline && b.isOffline) return -1;
+        if (a.isOffline && !b.isOffline) return 1;
+        // Then by recency (if available)
+        return (b.lastSeen?.seconds || 0) - (a.lastSeen?.seconds || 0);
+    });
+
+    // Deduplicate (in case user comes online while fetching)
+    const uniqueUsers = Array.from(new Map(allUsers.map(item => [item.uid, item])).values());
 
     const handleUserClick = async (otherUser) => {
         if (otherUser.uid === currentUserId) return;
 
-        // Use Deterministic ID (Alpha-sort UIDs) to prevent duplicate conversations
+        // Use Scoped ID to tie PMs to this specific Dropped Chat
         const sortedIds = [currentUserId, otherUser.uid].sort();
-        const convId = `${sortedIds[0]}_${sortedIds[1]}`;
+        const convId = `${chatId}_${sortedIds[0]}_${sortedIds[1]}`;
 
         try {
-            console.log("DEBUG: Opening chat with", otherUser.uid);
+            console.log("DEBUG: Opening chat with", otherUser.uid, "ConvID:", convId);
             // OPTIMISTIC UPDATE: Open immediately, don't wait for server ack
             setConversationId(convId);
             setSelectedUser(otherUser);
@@ -98,7 +139,7 @@ export default function PeopleListModal({ isOpen, onClose, chatId, currentUserId
                     </h2>
 
                     <div className="flex-1 min-h-0 overflow-y-auto space-y-2 mb-4 pr-1">
-                        {users.map(user => {
+                        {uniqueUsers.map(user => {
                             const isUnread = unreadUserIds.has(user.uid);
                             return (
                                 <div
@@ -111,7 +152,7 @@ export default function PeopleListModal({ isOpen, onClose, chatId, currentUserId
                                 >
                                     <div className="relative">
                                         {user.photoURL ? (
-                                            <img src={user.photoURL} alt="" className={`w-10 h-10 rounded-full shrink-0 object-cover ${isUnread ? 'border-2 border-purple-400' : 'border border-purple-500/30'}`} />
+                                            <img src={user.photoURL} alt="" className={`w-10 h-10 rounded-full shrink-0 object-cover ${isUnread ? 'border-2 border-purple-400' : 'border border-purple-500/30'} ${user.isOffline ? 'grayscale opacity-70' : ''}`} />
                                         ) : (
                                             <div className={`w-10 h-10 rounded-full shrink-0 flex items-center justify-center bg-gray-700 text-white font-bold text-sm ${isUnread ? 'border-2 border-purple-400' : 'border border-purple-500/30'}`}>
                                                 {user.displayName?.[0]?.toUpperCase() || '?'}
@@ -121,7 +162,9 @@ export default function PeopleListModal({ isOpen, onClose, chatId, currentUserId
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className={`font-bold text-sm truncate ${isUnread ? 'text-purple-300' : 'text-white'}`}>{user.displayName}</div>
-                                        <div className="text-xs text-gray-400">Online</div>
+                                        <div className={`text-xs ${user.isOffline ? 'text-gray-500 italic' : 'text-green-400'}`}>
+                                            {user.isOffline ? 'Offline' : 'Online'}
+                                        </div>
                                     </div>
                                     {isUnread ? (
                                         <div className="px-2 py-0.5 bg-purple-500 text-white text-[10px] font-bold rounded-full animate-pulse">

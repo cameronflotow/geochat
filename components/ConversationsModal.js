@@ -24,7 +24,8 @@ export default function ConversationsModal({ isOpen, onClose, user }) {
             const convs = snapshot.docs.map(doc => {
                 const data = doc.data();
                 // Identify Other User
-                const otherUid = data.participants.find(p => p !== user.uid);
+                const otherUid = data.participants ? data.participants.find(p => p !== user.uid) : 'unknown';
+                if (!otherUid) return null; // Skip invalid participants
                 // We'd ideally fetch their profile, but for now we might rely on cached names if stored on conv doc?
                 // The current create logic doesn't store names on conv doc. 
                 // We might need to fetch user profiles or just show "User".
@@ -34,7 +35,7 @@ export default function ConversationsModal({ isOpen, onClose, user }) {
                 // Let's assume for now we just show "User" or wait for subsequent update that adds names.
                 return { id: doc.id, ...data, otherUid };
             });
-            setConversations(convs);
+            setConversations(convs.filter(Boolean));
         });
 
         return () => unsub();

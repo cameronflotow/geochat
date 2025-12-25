@@ -107,14 +107,25 @@ export default function PostItem({ post, chatId, currentUserId, isOwner }) {
     const canDeletePost = isMine;
 
     return (
-        <div className="glass-panel p-4 animate-in fade-in slide-in-from-bottom-2">
-            <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden shrink-0 border border-purple-500/30">
-                    {post.creatorPhoto ? (
-                        <img src={post.creatorPhoto} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                        <div className="w-full h-full flex items-center justify-center text-sm font-bold text-white bg-gradient-to-br from-purple-500 to-indigo-500">
-                            {post.creatorName?.[0]?.toUpperCase() || '?'}
+        <div className="glass-panel p-4 animate-in fade-in slide-in-from-bottom-2 relative group">
+
+
+            <div className="relative z-10 flex items-start gap-3">
+                <div className="relative">
+                    <div className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden shrink-0 border border-purple-500/30">
+                        {post.creatorPhoto ? (
+                            <img src={post.creatorPhoto} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-sm font-bold text-white bg-gradient-to-br from-purple-500 to-indigo-500">
+                                {post.creatorName?.[0]?.toUpperCase() || '?'}
+                            </div>
+                        )}
+                    </div>
+                    {post.emojiStyle && (
+                        <div className={`absolute z-20 select-none pointer-events-none drop-shadow-sm ${Array.from(post.emojiStyle).length > 2
+                            ? '-bottom-2 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-sm text-black px-1.5 py-0.5 rounded-md text-[6px] font-black uppercase border border-white/20 leading-tight shadow-sm whitespace-normal text-center w-max max-w-[50px] flex items-center justify-center'
+                            : '-bottom-1 -right-1 text-base'}`}>
+                            {post.emojiStyle}
                         </div>
                     )}
                 </div>

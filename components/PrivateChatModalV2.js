@@ -84,7 +84,8 @@ export default function PrivateChatModalV2({ isOpen, onClose, conversationId, ot
                 text: msgText,
                 senderId: currentUserId,
                 senderName: auth.currentUser?.displayName || 'Anonymous',
-                createdAt: serverTimestamp()
+                createdAt: serverTimestamp(),
+                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // Auto-delete in 24h
             };
 
             await addDoc(collection(db, "conversations", conversationId, "messages"), msgData);
@@ -136,7 +137,7 @@ export default function PrivateChatModalV2({ isOpen, onClose, conversationId, ot
                             <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-black"></div>
                         </div>
                         <div>
-                            <span className="font-bold text-white block leading-tight">{otherUser?.displayName}</span>
+                            <span className="font-bold text-white block leading-tight">{otherUser?.displayName || 'Chat Partner'}</span>
                             <span className="text-[10px] text-gray-400 uppercase tracking-wider">Private Chat</span>
                         </div>
                     </div>

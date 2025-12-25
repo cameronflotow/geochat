@@ -1,48 +1,37 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Send, MapPin, Users } from 'lucide-react';
-import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc } from 'firebase/firestore';
+import { X, Megaphone, MapPin, Smile } from 'lucide-react';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, setDoc, getDoc } from 'firebase/firestore';
 import { geohashForLocation } from 'geofire-common';
 import { db, auth } from '@/lib/firebase';
 import { useShouts } from '@/hooks/useShouts';
-import ConversationsModal from './ConversationsModal';
+import PrivateChatModal from './PrivateChatModal';
+import ShoutItem from './ShoutItem';
+import EmojiInventoryGrid from './EmojiInventoryGrid';
 
 export default function ShoutsModal({ isOpen, onClose, userLocation, user }) {
     const { shouts, loading } = useShouts(userLocation);
     const [text, setText] = useState('');
+    const [isPinned, setIsPinned] = useState(true);
     const [sending, setSending] = useState(false);
-    const [isConversationsOpen, setIsConversationsOpen] = useState(false);
+
+    // Private Chat State
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [isPrivateChatOpen, setIsPrivateChatOpen] = useState(false);
+    const [privateConversationId, setPrivateConversationId] = useState(null);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
     if (!isOpen) return null;
 
     const handlePostCapped = async (text) => {
-        // Enforce Limits
-        // 1 free shout per month, or Unlimited if Premium.
-        // We'll trust the user doc "shoutsCount" and "subscriptionStatus"
-        // But we need to Read it first.
-
-        if (!user) {
-            alert("Sign in to shout!");
-            return;
-        }
-
         setSending(true);
         try {
-            const userRef = doc(db, "users", user.uid);
-            const userSnap = await getDoc(userRef);
-            const userData = userSnap.data() || {};
+            // UNLIMITED SHOUTS (Restriction Removed)
 
-            const isPremium = userData.subscriptionStatus === 'premium';
-            const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
-            const lastShoutMonth = userData.lastShoutMonth;
-            let count = (lastShoutMonth === currentMonth) ? (userData.shoutsCount || 0) : 0;
-
-            if (!isPremium && count >= 1) {
-                alert("You've used your 1 free shout this month! Upgrade to Premium for $4/mo.");
-                setSending(false);
-                return;
-            }
+            // Get User Style
+            const userSnap = await getDoc(doc(db, "users", user.uid));
+            const emojiStyle = userSnap.data()?.selectedEmoji || null;
 
             // Post
             const hash = geohashForLocation([userLocation.lat, userLocation.lng]);
@@ -54,15 +43,11 @@ export default function ShoutsModal({ isOpen, onClose, userLocation, user }) {
                 userId: user.uid,
                 userName: user.displayName || 'Anonymous',
                 userPhoto: user.photoURL,
-                createdAt: serverTimestamp()
+                isPinned: isPinned,
+                emojiStyle: emojiStyle,
+                createdAt: serverTimestamp(),
+                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // Auto-delete in 24h
             });
-
-            // Update usage logic
-            // Use setDoc with merge to ensure doc exists and updates safety
-            await setDoc(userRef, {
-                shoutsCount: (count || 0) + 1,
-                lastShoutMonth: currentMonth
-            }, { merge: true });
 
         } catch (e) {
             console.error(e);
@@ -70,25 +55,62 @@ export default function ShoutsModal({ isOpen, onClose, userLocation, user }) {
         } finally {
             setSending(false);
             setText('');
+            setIsPinned(true);
+        }
+    };
+
+    const handleUserClick = async (shoutAuthorId, shoutAuthorName, shoutAuthorPhoto) => {
+        if (shoutAuthorId === user?.uid) return;
+
+        // UNLIMITED DMs (Restriction Removed)
+
+        // Open Chat
+        const sortedIds = [user.uid, shoutAuthorId].sort();
+        const convId = `${sortedIds[0]}_${sortedIds[1]}`;
+
+        setPrivateConversationId(convId);
+        setSelectedUser({
+            uid: shoutAuthorId,
+            displayName: shoutAuthorName,
+            photoURL: shoutAuthorPhoto
+        });
+        setIsPrivateChatOpen(true);
+
+        // Ensure Doc
+        try {
+            await setDoc(doc(db, "conversations", convId), {
+                participants: sortedIds,
+                lastUpdated: serverTimestamp()
+            }, { merge: true });
+        } catch (e) { console.error(e); }
+    };
+
+    const handleLike = async (shout) => {
+        if (!user) return;
+        const shoutRef = doc(db, "shouts", shout.id);
+        const isLiked = shout.likes?.includes(user.uid);
+
+        if (isLiked) {
+            await updateDoc(shoutRef, { likes: arrayRemove(user.uid) });
+        } else {
+            await updateDoc(shoutRef, { likes: arrayUnion(user.uid) });
         }
     };
 
     return (
         <div className="fixed inset-0 z-[1500] flex items-end sm:items-center justify-center pointer-events-none">
-            <div className="pointer-events-auto bg-[#1a1a1a] w-full sm:max-w-md h-[80vh] sm:h-[600px] sm:rounded-2xl border-t sm:border border-white/10 flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-300">
+            <div className="pointer-events-auto bg-black/80 backdrop-blur-xl w-full sm:max-w-md h-[80vh] sm:h-[650px] sm:rounded-3xl border-t sm:border border-white/10 flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-300">
 
                 {/* Header */}
-                <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => setIsConversationsOpen(true)}
-                            className="p-2 hover:bg-white/10 rounded-full transition-colors"
-                        >
-                            <MessageCircle className="w-5 h-5 text-white" />
-                        </button>
-                        <h2 className="font-bold text-white text-lg">Local Shouts (4mi)</h2>
+                <div className="p-5 border-b border-white/10 flex items-center justify-between bg-white/5 backdrop-blur-md sticky top-0 z-10">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-purple-500/20">
+                            <Megaphone className="w-5 h-5" />
+                        </div>
+                        <h2 className="font-bold text-white text-lg">Local Shouts</h2>
+                        <span className="px-2 py-0.5 bg-white/10 rounded-full text-[10px] font-bold text-gray-400">1mi</span>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white">
+                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors">
                         <X className="w-6 h-6" />
                     </button>
                 </div>
@@ -96,59 +118,102 @@ export default function ShoutsModal({ isOpen, onClose, userLocation, user }) {
                 {/* Feed */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
                     {loading ? (
-                        <div className="text-center text-gray-500 py-10">Listening for shouts...</div>
+                        <div className="flex flex-col items-center justify-center h-40 gap-3 text-gray-500">
+                            <div className="w-6 h-6 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
+                            <span className="text-xs font-medium">Listening for shouts...</span>
+                        </div>
                     ) : shouts.length === 0 ? (
-                        <div className="text-center text-gray-500 py-10">
-                            <div className="text-3xl mb-2">📣</div>
-                            No shouts nearby. Be the first!
+                        <div className="flex flex-col items-center justify-center h-60 text-center gap-4 px-8 opacity-60">
+                            <div className="w-16 h-16 rounded-3xl bg-white/5 flex items-center justify-center">
+                                <Megaphone className="w-8 h-8 text-gray-500" />
+                            </div>
+                            <div>
+                                <h3 className="text-white font-bold mb-1">It's quiet here</h3>
+                                <p className="text-sm text-gray-400">Be the first to shout something to everyone nearby!</p>
+                            </div>
                         </div>
                     ) : (
                         shouts.map(shout => (
-                            <div key={shout.id} className="bg-black/40 p-4 rounded-xl border border-white/5">
-                                <div className="flex items-start gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold shrink-0">
-                                        {shout.userName?.[0]?.toUpperCase()}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between items-start">
-                                            <span className="font-bold text-white text-sm">{shout.userName}</span>
-                                            <span className="text-[10px] text-gray-500">
-                                                {shout.createdAt?.toMillis ? new Date(shout.createdAt.toMillis()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
-                                            </span>
-                                        </div>
-                                        <p className="text-gray-200 text-sm mt-1 break-words">{shout.text}</p>
-                                    </div>
-                                </div>
-                            </div>
+                            <ShoutItem
+                                key={shout.id}
+                                shout={shout}
+                                user={user}
+                                handleUserClick={handleUserClick}
+                            />
                         ))
                     )}
                 </div>
 
                 {/* Input Area */}
-                <div className="p-4 border-t border-white/10 bg-white/5">
-                    <div className="flex gap-2">
-                        <input
-                            value={text}
-                            onChange={(e) => setText(e.target.value)}
-                            placeholder="Shout to everyone nearby..."
-                            className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition-colors"
-                            onKeyDown={(e) => e.key === 'Enter' && handlePostCapped(text)}
-                        />
+                <div className="p-4 bg-black/40 border-t border-white/10 backdrop-blur-md relative z-20">
+
+                    {/* Emoji Picker Popover */}
+                    {showEmojiPicker && (
+                        <div className="absolute bottom-full left-4 mb-2 w-64 animate-in slide-in-from-bottom-2 duration-200 z-30">
+                            <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-2xl p-3 shadow-2xl">
+                                <div className="flex justify-between items-center mb-2 px-1">
+                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Choose Style</span>
+                                    <button onClick={() => setShowEmojiPicker(false)} className="text-gray-500 hover:text-white"><X className="w-3 h-3" /></button>
+                                </div>
+                                <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                                    <EmojiInventoryGrid userId={user?.uid} />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex items-center gap-2 mb-2 px-1">
+                        <button
+                            onClick={() => setIsPinned(!isPinned)}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${isPinned
+                                ? 'bg-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]'
+                                : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                                }`}
+                        >
+                            <MapPin className="w-3 h-3" />
+                            {isPinned ? 'Pinned to Map' : 'Pin to Map'}
+                        </button>
+                    </div>
+
+                    <div className="relative flex gap-2">
+                        <div className="relative flex-1 group">
+                            <input
+                                value={text}
+                                onChange={(e) => setText(e.target.value)}
+                                placeholder="Shout something..."
+                                maxLength={200}
+                                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-5 pr-14 py-3.5 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all"
+                                onKeyDown={(e) => e.key === 'Enter' && handlePostCapped(text)}
+                            />
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-1 rounded-md bg-black/20 text-[10px] font-medium text-gray-500 border border-white/5">
+                                <span className={text.length >= 200 ? 'text-red-400' : ''}>{text.length}</span>/200
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                            className={`p-3.5 rounded-2xl transition-all duration-200 hover:scale-105 active:scale-95 ${showEmojiPicker ? 'bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]' : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white'}`}
+                        >
+                            <Smile className="w-6 h-6" />
+                        </button>
+
                         <button
                             onClick={() => handlePostCapped(text)}
                             disabled={!text.trim() || sending}
-                            className="p-3 bg-purple-600 rounded-xl text-white disabled:opacity-50 hover:bg-purple-500 transition-colors"
+                            className="p-3.5 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-2xl text-white shadow-lg shadow-purple-500/20 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all duration-200"
                         >
-                            <Send className="w-5 h-5" />
+                            {sending ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Megaphone className="w-6 h-6" />}
                         </button>
                     </div>
                 </div>
 
-                {/* Conversations Modal (Inbox) */}
-                <ConversationsModal
-                    isOpen={isConversationsOpen}
-                    onClose={() => setIsConversationsOpen(false)}
-                    user={user}
+                {/* Modals */}
+                <PrivateChatModal
+                    isOpen={isPrivateChatOpen}
+                    onClose={() => setIsPrivateChatOpen(false)}
+                    conversationId={privateConversationId}
+                    otherUser={selectedUser}
+                    currentUserId={user?.uid}
                 />
             </div>
         </div>

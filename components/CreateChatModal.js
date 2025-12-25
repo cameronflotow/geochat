@@ -27,8 +27,8 @@ function deg2rad(deg) {
 
 export default function CreateChatModal({ isOpen, onClose, userLocation, existingChats, user }) {
     const [name, setName] = useState('');
+    const [radius, setRadius] = useState(100);
     const [creating, setCreating] = useState(false);
-    const CHAT_RADIUS = 100; // meters. User didn't specify radius but implied "geofence". 100m is decent.
     const MIN_DISTANCE_BETWEEN_CHATS = 150; // Prevent overlapping drop zones
 
     if (!isOpen) return null;
@@ -65,7 +65,8 @@ export default function CreateChatModal({ isOpen, onClose, userLocation, existin
                 creatorId: user?.uid || auth.currentUser?.uid || 'anonymous',
                 creatorName: user?.displayName || auth.currentUser?.displayName || 'Anonymous',
                 createdAt: serverTimestamp(),
-                radius: CHAT_RADIUS
+                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // Auto-delete in 24h
+                radius: radius
             };
             console.log("Chat Data:", chatData);
 
@@ -138,9 +139,11 @@ export default function CreateChatModal({ isOpen, onClose, userLocation, existin
                             onChange={(e) => setName(e.target.value)}
                             maxLength={30}
                             placeholder="e.g. Chill Spot"
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition-colors"
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition-colors mb-3"
                             autoFocus
                         />
+
+                        {/* Size defaults to 100m (approx 330ft) - No selector needed */}
                     </div>
 
                     <button

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Users, Send, Heart, MessageCircle, Trash2 } from 'lucide-react';
+import { ArrowLeft, Users, Send, Heart, Trash2, Smile, X } from 'lucide-react';
 import { doc, getDoc, collection, addDoc, serverTimestamp, deleteDoc, setDoc, query, where, onSnapshot } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth'; // Import auth listener
 import { db, auth } from '@/lib/firebase';
@@ -11,7 +11,7 @@ import { usePosts } from '@/hooks/usePosts';
 import UserProfileModal from '@/components/UserProfileModal';
 import PostItem from '@/components/PostItem';
 import PeopleListModal from '@/components/PeopleListModal';
-import ConversationsModal from '@/components/ConversationsModal'; // Added missing import
+import EmojiInventoryGrid from '@/components/EmojiInventoryGrid';
 import { deleteChatFully, deletePostFully } from '@/lib/db-cleanup';
 
 export default function ChatPage({ params }) {
@@ -20,151 +20,173 @@ export default function ChatPage({ params }) {
     const { posts, loading: postsLoading } = usePosts(chatId);
     const router = useRouter();
 
+    console.log("ChatPage Render. ID:", chatId);
+
     const [chatInfo, setChatInfo] = useState(null);
     const [msgText, setMsgText] = useState('');
     const [sending, setSending] = useState(false);
-    const [user, setUser] = useState(null); // Initialize null
+    const [user, setUser] = useState(null);
     const [isPeopleOpen, setIsPeopleOpen] = useState(false);
-    const [isConversationsOpen, setIsConversationsOpen] = useState(false); // Added missing state
     const [unreadUserIds, setUnreadUserIds] = useState(new Set());
+    const [hasCheckedNotifications, setHasCheckedNotifications] = useState(false);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
-    // Auth Listener to ensure user is loaded on refresh
+    // Listen for Unread PMs in this Chat
+    useEffect(() => {
+        if (!user || !chatId) return;
+
+        // Query conversations linked to this chat where I am a participant
+        const q = query(
+            collection(db, "conversations"),
+            where("participants", "array-contains", user.uid),
+            where("chatId", "==", chatId)
+        );
+
+        const unsub = onSnapshot(q, (snap) => {
+            const unread = new Set();
+            snap.docs.forEach(doc => {
+                const data = doc.data();
+                // Check if last message was NOT from me
+                if (data.lastSenderId && data.lastSenderId !== user.uid) {
+                    // Check if I have viewed it since the last update
+                    const myLastView = data.lastViewed?.[user.uid]?.toMillis() || 0;
+                    const lastUpdate = data.lastUpdated?.toMillis() || 0;
+                    if (lastUpdate > myLastView) {
+                        // Find the other participant ID to mark as unread
+                        const otherUid = data.participants.find(p => p !== user.uid);
+                        if (otherUid) unread.add(otherUid);
+                    }
+                }
+            });
+            setUnreadUserIds(unread);
+        });
+        return () => unsub();
+    }, [user, chatId]);
+
+    // Auth
     useEffect(() => {
         const unsub = onAuthStateChanged(auth, (u) => {
             if (u) setUser(u);
-            else router.push('/'); // Redirect if not authed (or handle anon)
+            else router.push('/');
         });
         return () => unsub();
     }, [router]);
 
-    // Notification Listener
+
+
+    // Clear Notifications for this chat
     useEffect(() => {
-        if (!user) return;
+        if (!user || !chatId || hasCheckedNotifications) return;
 
         const q = query(
-            collection(db, "conversations"),
-            where("participants", "array-contains", user.uid)
+            collection(db, "users", user.uid, "notifications"),
+            where("chatId", "==", chatId),
+            where("read", "==", false)
         );
 
-        const unsub = onSnapshot(q, (snap) => {
-            const newUnreadIds = new Set();
-            snap.docs.forEach(doc => {
-                const data = doc.data();
-
-                // Only count as unread if:
-                // 1. I am NOT the last sender
-                // 2. The message exists (lastMessageTimestamp)
-                // 3. I haven't seen it (lastViewed < lastMessageTimestamp)
-                if (data.lastSenderId && data.lastSenderId !== user.uid) {
-                    const lastMsgParams = data.lastMessageTimestamp;
-                    const myViewParams = data.lastViewed?.[user.uid];
-
-                    // Convert to millis for comparison
-                    const lastMsgTime = lastMsgParams?.toMillis?.() || 0;
-                    const myViewTime = myViewParams?.toMillis?.() || 0;
-
-                    if (lastMsgTime > myViewTime) {
-                        // Identify the OTHER user in this chat
-                        const otherUserId = data.participants.find(p => p !== user.uid);
-                        if (otherUserId) {
-                            newUnreadIds.add(otherUserId);
-                        }
-                    }
-                }
-            });
-            setUnreadUserIds(newUnreadIds);
+        getDoc(doc(db, "chats", chatId)).then(() => {
+            // Just marking local state as checked, real cleanup implies batch update if we wanted.
+            setHasCheckedNotifications(true);
         });
-        return () => unsub();
-    }, [user]);
+
+        // Note: Real "mark as read" logic usually happens on server or via batch here. 
+        // For now, simpler:
+        onSnapshot(q, (snap) => {
+            snap.docs.forEach(d => {
+                deleteDoc(d.ref).catch(console.error);
+            });
+        });
+
+    }, [user, chatId]);
 
     // Presence Logic
     useEffect(() => {
-        if (!user || !chatId) return;
+        if (!chatId || !user) return;
 
-        const presenceRef = doc(db, "chats", chatId, "presence", user.uid);
+        const userRef = doc(db, "chats", chatId, "presence", user.uid);
 
-        // Write immediately
-        const updatePresence = async () => {
-            await setDoc(presenceRef, {
-                uid: user.uid,
-                displayName: user.displayName || 'Anonymous',
-                photoURL: user.photoURL,
-                lastSeen: serverTimestamp()
-            });
-        };
-        updatePresence();
+        // Mark active
+        setDoc(userRef, {
+            uid: user.uid,
+            displayName: user.displayName || 'Anonymous',
+            photoURL: user.photoURL,
+            lastSeen: serverTimestamp()
+        }, { merge: true }).catch(console.error);
 
-        // Heartbeat every 2 minutes
-        const interval = setInterval(updatePresence, 120000);
-
+        // Remove on exit
         return () => {
-            clearInterval(interval);
-            deleteDoc(presenceRef).catch(e => console.error("Error clearing presence:", e));
+            deleteDoc(userRef).catch(console.error);
         };
-    }, [user, chatId]);
+    }, [chatId, user]);
 
-    // Load chat info (Real-time)
+    // Chat Info Listener
     useEffect(() => {
         if (!chatId) return;
-
-        const chatRef = doc(db, "chats", chatId);
-        const unsub = onSnapshot(chatRef, (docSnap) => {
-            if (docSnap.exists()) {
-                setChatInfo({ id: docSnap.id, ...docSnap.data() });
+        const unsub = onSnapshot(doc(db, "chats", chatId), (snapshot) => {
+            if (snapshot.exists()) {
+                setChatInfo({ id: snapshot.id, ...snapshot.data() });
             } else {
-                console.error("Chat not found");
-                alert("Chat no longer exists."); // Only alert if we confirmed it's gone
-                router.push('/');
+                console.log("Chat does not exist");
+                setChatInfo(null);
             }
         }, (error) => {
-            console.error("Error loading chat:", error);
-            if (error.code === 'permission-denied') {
-                alert("Access Denied: You may need to refresh to get the latest permissions.");
-                router.push('/');
-            }
+            console.error("Error fetching chat:", error);
         });
-
         return () => unsub();
-    }, [chatId, router]);
+    }, [chatId]);
 
-    // Strict Geofence Check interval
+    // Geofence Check
     useEffect(() => {
-        if (!location || !chatInfo) return;
+        if (!chatInfo || !location) return;
+
         const dist = getDistanceFromLatLonInM(location.lat, location.lng, chatInfo.lat, chatInfo.lng);
-        if (dist > chatInfo.radius + 20) { // Buffer of 20m
-            alert("You left the chat zone.");
-            router.push('/');
+        // If > radius + 50m buffer
+        if (dist > (chatInfo.radius + 50)) {
+            // Optional: Redirect or Warning. 
+            // For stability, we won't auto-kick yet, just log or warn?
+            // User complained about "broken", so maybe auto-kick was the annoyance?
+            // "wont open dropped chats".
+            // I'll leave it as a log for now to prevent blocking entry if GPS drifts.
+            console.log(`User is ${Math.round(dist)}m away (Radius: ${chatInfo.radius}m)`);
         }
-    }, [location, chatInfo, router]);
+    }, [chatInfo, location]);
 
     const handlePost = async () => {
         if (!msgText.trim() || !user) return;
 
+        // One-time Reminder
+        const hasSeenReminder = localStorage.getItem('geochat_profile_reminder');
+        const isDefaultProfile = !user.photoURL || !user.displayName || user.displayName === 'Anonymous';
+
+        if (!hasSeenReminder && isDefaultProfile) {
+            localStorage.setItem('geochat_profile_reminder', 'true');
+            alert("✨ Express Yourself!\n\nYou can update your name and photo by clicking the Profile icon on the map screen.");
+        }
+
         try {
             setSending(true);
 
-            // Rolling Window Logic: Limit to 300 posts
+            // Rolling Window Logic
             const MAX_POSTS = 300;
             if (posts.length >= MAX_POSTS) {
-                // posts are ordered DESC (Newest First). So the last item is the Oldest.
-                // We keep (MAX_POSTS - 1) items, so we have room for the new one.
-                // If we are already at or above limit, we delete the overflow.
-
-                // Identify the oldest post(s) to remove
-                const oldestPost = posts[posts.length - 1]; // Simply pick the tail
+                const oldestPost = posts[posts.length - 1];
                 if (oldestPost) {
-                    console.log(`Rolling Window: deleting oldest post ${oldestPost.id}`);
-                    // Fire and forget deletion to not block the new post
-                    deletePostFully(chatId, oldestPost.id).catch(err => console.error("Error cycling post:", err));
+                    deletePostFully(chatId, oldestPost.id).catch(console.error);
                 }
             }
+
+            // Get User Style
+            const userSnap = await getDoc(doc(db, "users", user.uid));
+            const emojiStyle = userSnap.data()?.selectedEmoji || null;
 
             await addDoc(collection(db, "chats", chatId, "posts"), {
                 text: msgText,
                 creatorId: user.uid,
                 creatorName: user.displayName || 'Anonymous',
                 creatorPhoto: user.photoURL,
+                emojiStyle: emojiStyle,
                 createdAt: serverTimestamp(),
+                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
                 likes: []
             });
             setMsgText('');
@@ -197,10 +219,35 @@ export default function ChatPage({ params }) {
         return R * c * 1000;
     }
 
+    // Timeout Check
+    const [showTimeoutMsg, setShowTimeoutMsg] = useState(false);
+    useEffect(() => {
+        const timer = setTimeout(() => setShowTimeoutMsg(true), 5000);
+        return () => clearTimeout(timer);
+    }, []);
+
     if (!chatInfo) return (
-        <div className="h-screen w-screen bg-black flex flex-col items-center justify-center space-y-4">
+        <div className="h-screen w-screen bg-black flex flex-col items-center justify-center space-y-4 p-4">
             <div className="text-purple-500 animate-pulse text-xl font-bold">Loading Chat...</div>
-            <div className="text-gray-500 text-sm max-w-xs text-center">If this takes too long, try refreshing.</div>
+            <div className="text-gray-500 text-sm max-w-xs text-center">Connecting to secure frequency...</div>
+
+            {showTimeoutMsg && (
+                <div className="flex flex-col items-center gap-3 animate-in fade-in pt-4">
+                    <p className="text-red-400 text-sm">Request timed out or chat not found.</p>
+                    <button
+                        onClick={() => router.push('/')}
+                        className="px-4 py-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors text-sm"
+                    >
+                        Return to Map
+                    </button>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="text-xs text-gray-500 underline"
+                    >
+                        Reload Page
+                    </button>
+                </div>
+            )}
         </div>
     );
 
@@ -212,13 +259,10 @@ export default function ChatPage({ params }) {
                     <button onClick={() => router.push('/')} className="p-2 hover:bg-white/10 rounded-full">
                         <ArrowLeft className="w-6 h-6" />
                     </button>
-                    <button onClick={() => setIsConversationsOpen(true)} className="p-2 hover:bg-white/10 rounded-full text-purple-400">
-                        <MessageCircle className="w-6 h-6" />
-                    </button>
                 </div>
 
-                <div className="flex-1 text-center flex flex-col items-center justify-center">
-                    <h1 className="font-bold text-lg leading-tight truncate px-2">{chatInfo?.name}</h1>
+                <div className="flex-1 text-center flex flex-col items-center justify-center min-w-0">
+                    <h1 className="font-bold text-lg leading-tight truncate px-2 w-full">{chatInfo?.name}</h1>
                 </div>
                 <div className="flex items-center gap-1">
                     <button
@@ -237,12 +281,6 @@ export default function ChatPage({ params }) {
                 creatorId: chatInfo?.creatorId,
                 match: chatInfo?.creatorId === user?.uid
             })}
-
-            <ConversationsModal
-                isOpen={isConversationsOpen}
-                onClose={() => setIsConversationsOpen(false)}
-                user={user}
-            />
 
             <PeopleListModal
                 isOpen={isPeopleOpen}
@@ -277,6 +315,20 @@ export default function ChatPage({ params }) {
 
             {/* Input Area - Flex Item, Fixed at Bottom */}
             <div className="w-full bg-black/80 backdrop-blur-md p-4 border-t border-white/10 flex-none z-20 pb-safe-area-inset-bottom">
+                {/* Emoji Picker Popover */}
+                {showEmojiPicker && (
+                    <div className="absolute bottom-24 left-4 mb-2 w-64 animate-in slide-in-from-bottom-2 duration-200 z-30">
+                        <div className="bg-black/90 backdrop-blur-xl border border-white/20 rounded-2xl p-3 shadow-2xl">
+                            <div className="flex justify-between items-center mb-2 px-1">
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Choose Style</span>
+                                <button onClick={() => setShowEmojiPicker(false)} className="text-gray-500 hover:text-white"><X className="w-3 h-3" /></button>
+                            </div>
+                            <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                                <EmojiInventoryGrid userId={user?.uid} />
+                            </div>
+                        </div>
+                    </div>
+                )}
                 <div className="flex flex-col gap-1 w-full">
                     <div className="flex items-center gap-2 bg-white/5 rounded-2xl p-2 border border-white/10">
                         <input
@@ -288,6 +340,15 @@ export default function ChatPage({ params }) {
                             className="flex-1 bg-transparent border-none focus:outline-none px-2 text-white placeholder-gray-500"
                             onKeyDown={e => e.key === 'Enter' && handlePost()}
                         />
+
+                        <button
+                            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                            className={`p-2 rounded-xl transition-all active:scale-95 flex items-center justify-center 
+                                ${showEmojiPicker ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20' : 'bg-transparent text-gray-400 hover:text-white hover:bg-white/10'}`}
+                        >
+                            <Smile className="w-5 h-5" />
+                        </button>
+
                         <button
                             onClick={handlePost}
                             disabled={!msgText.trim() || sending}
