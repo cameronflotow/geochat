@@ -5,7 +5,7 @@ import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
 
-export default function EmojiInventoryGrid({ userId, className = '' }) {
+export default function EmojiInventoryGrid({ userId, className = '', onSelect }) {
     const [userData, setUserData] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -22,6 +22,7 @@ export default function EmojiInventoryGrid({ userId, className = '' }) {
         if (!userId) return;
         try {
             await updateDoc(doc(db, "users", userId), { selectedEmoji: emoji });
+            if (onSelect) onSelect(emoji);
         } catch (e) {
             console.error("Failed to select emoji", e);
         }

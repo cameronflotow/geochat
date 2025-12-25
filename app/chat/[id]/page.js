@@ -326,7 +326,7 @@ export default function ChatPage({ params }) {
                                     <button onClick={() => setShowEmojiPicker(false)} className="text-gray-500 hover:text-white"><X className="w-3 h-3" /></button>
                                 </div>
                                 <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                                    <EmojiInventoryGrid userId={user?.uid} />
+                                    <EmojiInventoryGrid userId={user?.uid} onSelect={() => setShowEmojiPicker(false)} />
                                 </div>
                             </div>
                         </div>

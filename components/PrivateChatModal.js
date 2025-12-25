@@ -156,7 +156,7 @@ export default function PrivateChatModal({ isOpen, onClose, conversationId, othe
                                         <button onClick={() => setShowEmojiPicker(false)} className="text-gray-500 hover:text-white"><X className="w-3 h-3" /></button>
                                     </div>
                                     <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                                        <EmojiInventoryGrid userId={currentUserId} />
+                                        <EmojiInventoryGrid userId={currentUserId} onSelect={() => setShowEmojiPicker(false)} />
                                     </div>
                                 </div>
                             </div>
