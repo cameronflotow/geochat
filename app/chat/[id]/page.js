@@ -314,7 +314,7 @@ export default function ChatPage({ params }) {
             </div>
 
             {/* Input Area - Flex Item, Fixed at Bottom */}
-            <div className="w-full bg-black/80 backdrop-blur-md p-4 border-t border-white/10 flex-none z-20 pb-safe-area-inset-bottom">
+            <div className="w-full bg-black/80 backdrop-blur-md p-2 border-t border-white/10 flex-none z-20 pb-safe-area-inset-bottom">
                 {/* Emoji Picker Popover */}
                 {showEmojiPicker && (
                     <>

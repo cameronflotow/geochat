@@ -182,12 +182,12 @@ export default function ShoutsModal({ isOpen, onClose, userLocation, user }) {
                             <input
                                 value={text}
                                 onChange={(e) => setText(e.target.value)}
-                                placeholder="Shout something..."
+                                placeholder="Shout..."
                                 maxLength={200}
-                                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-4 pr-12 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all font-medium"
+                                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-3 pr-10 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all font-medium"
                                 onKeyDown={(e) => e.key === 'Enter' && handlePostCapped(text)}
                             />
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded-md text-[10px] font-medium text-gray-500">
+                            <div className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded-md text-[10px] font-medium text-gray-500">
                                 <span className={text.length >= 200 ? 'text-red-400' : ''}>{text.length}</span>
                             </div>
                         </div>
@@ -196,7 +196,7 @@ export default function ShoutsModal({ isOpen, onClose, userLocation, user }) {
                             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                             className={`p-2 rounded-2xl transition-all duration-200 hover:scale-105 active:scale-95 shrink-0 ${showEmojiPicker ? 'bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]' : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white'}`}
                         >
-                            <Smile className="w-6 h-6" />
+                            <Smile className="w-5 h-5" />
                         </button>
 
                         <button
@@ -204,7 +204,7 @@ export default function ShoutsModal({ isOpen, onClose, userLocation, user }) {
                             disabled={!text.trim() || sending}
                             className="p-2 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-2xl text-white shadow-lg shadow-purple-500/20 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all duration-200 shrink-0"
                         >
-                            {sending ? <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Megaphone className="w-6 h-6" />}
+                            {sending ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Megaphone className="w-5 h-5" />}
                         </button>
                     </div>
                 </div>
