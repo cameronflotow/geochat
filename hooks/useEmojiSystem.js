@@ -55,7 +55,7 @@ const ULTRA_RARE = [
     '🥇', '🥈', '🥉', '🏅', '🎖', '🏆',
     // Custom Text Items (Refined)
     'BadBitch', 'Wants a Drink',
-    'Single', 'Taken', 'Vibing', 'Happy', 'Sad', 'Adventurous', 'Wants 🍺', 'Wants 💬',
+    'Single', 'Taken', 'Vibing', 'Happy', 'Sad', 'Wants 🍺', 'Wants 💬',
     'Flotow' // The Classic
 ];
 

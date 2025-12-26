@@ -62,7 +62,7 @@ export default function EmojiInventoryGrid({ userId, className = '', onSelect })
                     const entries = Object.entries(inventory);
 
                     // DEFAULTS (Always available)
-                    const DEFAULTS = ['Wants 🍸', 'Wants ♟️', 'Wants 🎵', 'Wants 💃', 'Wants 🤫'];
+                    const DEFAULTS = ['Wants 🍸', 'Wants 🎲', 'Wants 🎵', 'Wants 💃', 'Wants 🤫', 'Wants 🔥'];
                     const defaultEntries = DEFAULTS.filter(d => !inventory[d]).map(d => [d, 1]); // Mock count 1
 
                     // Split into Text vs Emoji
