@@ -61,10 +61,14 @@ export default function EmojiInventoryGrid({ userId, className = '', onSelect })
                 {(() => {
                     const entries = Object.entries(inventory);
 
+                    // DEFAULTS (Always available)
+                    const DEFAULTS = ['Wants 🍸', 'Wants ♟️', 'Wants 🎵', 'Wants 💃', 'Wants 🤫'];
+                    const defaultEntries = DEFAULTS.filter(d => !inventory[d]).map(d => [d, 1]); // Mock count 1
+
                     // Split into Text vs Emoji
                     // Text items > 2 chars (e.g. "Complicated")
                     // Emoji items <= 2 chars (roughly, or just standard sort)
-                    const textItems = entries.filter(([k]) => Array.from(k).length > 2).sort((a, b) => a[0].localeCompare(b[0]));
+                    const textItems = [...entries, ...defaultEntries].filter(([k]) => Array.from(k).length > 2).sort((a, b) => a[0].localeCompare(b[0]));
                     const emojiItems = entries.filter(([k]) => Array.from(k).length <= 2).sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0])); // Stable sort based on counts then name
 
                     return [...textItems, ...emojiItems].map(([emoji, count]) => {

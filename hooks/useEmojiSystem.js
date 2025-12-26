@@ -54,8 +54,8 @@ const ULTRA_RARE = [
     // Medals/Trophies
     '🥇', '🥈', '🥉', '🏅', '🎖', '🏆',
     // Custom Text Items (Refined)
-    'BadBitch', 'Wants a Drink', 'Looking for Group', 'Study Partner',
-    'Single', 'Taken', 'Complicated', 'Vibing', 'Happy', 'Sad', 'Adventurous', 'Wants 🍺', 'Wants 💬', 'Wants 🍸',
+    'BadBitch', 'Wants a Drink',
+    'Single', 'Taken', 'Vibing', 'Happy', 'Sad', 'Adventurous', 'Wants 🍺', 'Wants 💬',
     'Flotow' // The Classic
 ];
 
