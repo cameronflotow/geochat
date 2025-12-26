@@ -89,7 +89,6 @@ export default function EmojiInventoryGrid({ userId, className = '', onSelect })
                             >
                                 <span className={`${isText ? 'text-[7px] font-bold leading-none text-center break-words w-full px-0.5 flex items-center justify-center h-full' : 'text-2xl'} drop-shadow-md select-none`}>{emoji}</span>
                                 {!isText && <span className="text-[9px] font-bold text-gray-400 -mt-1">x{count}</span>}
-                                {isText && <span className="absolute bottom-0.5 right-1 text-[7px] font-bold text-gray-500">x{count}</span>}
 
                                 {isUltraRare && (
                                     <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full animate-pulse shadow-lg" title="Rare!" />
