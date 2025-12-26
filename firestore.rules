@@ -40,6 +40,11 @@ service cloud.firestore {
             allow read, write: if isAuthenticated();
          }
        }
+       
+       // PRESENCE
+       match /presence/{presenceId} {
+         allow read, write: if isAuthenticated();
+       }
     }
 
     // SHOUTS: Authenticated Read/Write
@@ -56,6 +61,11 @@ service cloud.firestore {
 
     // MOODS: Authenticated Read/Write
     match /moods/{moodId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // CONVERSATIONS: Public Read/Write for Authenticated (Private logic handled by query filters)
+    match /conversations/{conversationId} {
       allow read, write: if isAuthenticated();
     }
   }
