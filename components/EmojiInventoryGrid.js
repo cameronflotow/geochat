@@ -59,7 +59,8 @@ export default function EmojiInventoryGrid({ userId, className = '', onSelect })
                 </div>
 
                 {(() => {
-                    const entries = Object.entries(inventory);
+                    const BANNED_ITEMS = ['Single', 'Taken', 'Complicated', 'Adventurous', 'Vibing', 'Happy', 'Sad', 'BadBitch', 'Wants a Drink', 'Flotow', 'Looking for Group', 'Study Partner'];
+                    const entries = Object.entries(inventory).filter(([k]) => !BANNED_ITEMS.includes(k));
 
                     // DEFAULTS (Always available)
                     const DEFAULTS = ['Wants 🍸', 'Wants 🎲', 'Wants 🎵', 'Wants 💃', 'Wants 🤫', 'Wants 🔥'];

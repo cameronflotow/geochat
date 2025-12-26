@@ -123,7 +123,7 @@ export default function PostItem({ post, chatId, currentUserId, isOwner }) {
                     </div>
                     {post.emojiStyle && (
                         <div className={`absolute z-20 select-none pointer-events-none drop-shadow-sm ${Array.from(post.emojiStyle).length > 2
-                            ? '-bottom-3 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-sm text-black px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase border border-white/20 leading-tight shadow-sm whitespace-normal text-center w-max max-w-[60px] flex items-center justify-center'
+                            ? '-bottom-3 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-sm text-black px-1.5 py-0.5 rounded-md text-[7px] font-black uppercase border border-white/20 leading-tight shadow-sm whitespace-normal text-center w-max max-w-[55px] flex items-center justify-center'
                             : '-bottom-1 -right-1 text-base'}`}>
                             {post.emojiStyle}
                         </div>
