@@ -44,11 +44,14 @@ export default function Map({ userLocation, chats, shouts = [], currentUser, onC
     const defaultPosition = [37.7749, -122.4194];
 
     const [myEmoji, setMyEmoji] = useState(null);
+    const [myColor, setMyColor] = useState(null);
 
     useEffect(() => {
         if (!currentUser) return;
         const unsub = onSnapshot(doc(db, "users", currentUser.uid), (doc) => {
-            setMyEmoji(doc.data()?.selectedEmoji || null);
+            const data = doc.data();
+            setMyEmoji(data?.selectedEmoji || null);
+            setMyColor(data?.markerColor || null);
         });
         return () => unsub();
     }, [currentUser]);
@@ -57,13 +60,13 @@ export default function Map({ userLocation, chats, shouts = [], currentUser, onC
         className: 'user-marker',
         html: `
             <div class="relative w-9 h-9 flex items-center justify-center">
-                <div class="w-6 h-6 bg-green-600 rounded-full border-2 border-white shadow-lg animate-pulse-slow"></div>
+                <div class="w-6 h-6 rounded-full border-2 border-white shadow-lg animate-pulse-slow" style="background-color: ${myColor || '#16a34a'}"></div>
                 ${myEmoji && Array.from(myEmoji).length <= 2 ? `<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-sm z-50 pointer-events-none select-none leading-none pb-0.5">${myEmoji}</div>` : ''}
             </div>
         `,
         iconSize: [36, 36],
         iconAnchor: [18, 18]
-    }), [myEmoji]);
+    }), [myEmoji, myColor]);
 
     // Check if user is inside any chat
     const isInside = (chat) => {

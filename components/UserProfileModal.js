@@ -441,6 +441,33 @@ export default function UserProfileModal({ isOpen, onClose, user }) {
 
                             <div className="h-px bg-white/10" />
 
+                            {/* MARKER COLOR SELECTOR */}
+                            <div className="space-y-3">
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Map Marker Color</span>
+                                <div className="flex flex-wrap gap-2">
+                                    {[
+                                        '#16a34a', // Green (Default)
+                                        '#2563eb', // Blue
+                                        '#9333ea', // Purple
+                                        '#db2777', // Pink
+                                        '#dc2626', // Red
+                                        '#ea580c', // Orange
+                                        '#ca8a04', // Yellow
+                                        '#0d9488', // Teal
+                                        '#fff'     // White
+                                    ].map(color => (
+                                        <button
+                                            key={color}
+                                            onClick={() => updateDoc(doc(db, "users", user.uid), { markerColor: color })}
+                                            className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${userData?.markerColor === color || (!userData?.markerColor && color === '#16a34a') ? 'border-white scale-110 shadow-[0_0_10px_rgba(255,255,255,0.5)]' : 'border-transparent opacity-50 hover:opacity-100'}`}
+                                            style={{ backgroundColor: color }}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="h-px bg-white/10" />
+
                             {/* 4. Upgrade Button (Only if NOT anonymous) */}
                             {!isPremium ? (
                                 <div className="cursor-not-allowed group relative overflow-hidden rounded-xl bg-white/5 border border-white/5 p-4 opacity-70">
