@@ -9,6 +9,7 @@ import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
+import { distanceBetween } from 'geofire-common';
 import UserProfileModal from '@/components/UserProfileModal';
 import CreateChatModal from '@/components/CreateChatModal';
 import WelcomeModal from '@/components/WelcomeModal';
@@ -175,13 +176,20 @@ export default function Home() {
         });
     };
 
-
+    const filteredChats = useMemo(() => {
+        if (!location || !chats) return [];
+        const radiusKm = shoutRadius * 1.60934;
+        return chats.filter(chat => {
+            const distKm = distanceBetween([location.lat, location.lng], [chat.lat, chat.lng]);
+            return distKm <= radiusKm;
+        });
+    }, [chats, location, shoutRadius]);
 
     return (
         <main className="w-screen h-[100dvh] relative overflow-hidden bg-black">
             <Map
                 userLocation={location}
-                chats={chats}
+                chats={filteredChats}
                 shouts={shouts}
                 currentUser={user}
                 onChatClick={handleChatClick}
