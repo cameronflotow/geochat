@@ -16,9 +16,13 @@ export function useShouts(userLocation, radiusMiles = 10) {
             return;
         }
 
-        const radiusInM = radiusMiles * 1609.34;
+        const radiusNum = Number(radiusMiles) || 10;
+        const radiusInM = radiusNum * 1609.34;
         const center = [userLocation.lat, userLocation.lng];
         const bounds = geohashQueryBounds(center, radiusInM);
+
+        setShouts([]); // CLEAR OLD DATA IMMEDIATELY
+        setLoading(true);
 
         const listeners = [];
         const resultsByBound = new Map();
@@ -27,6 +31,7 @@ export function useShouts(userLocation, radiusMiles = 10) {
             const allDocs = [];
             resultsByBound.forEach(docs => allDocs.push(...docs));
 
+            console.log(`[useShouts] Update State. Radius: ${radiusInM}m. Total docs from firestore: ${allDocs.length}`);
             const uniqueMap = new Map();
             allDocs.forEach(doc => {
                 const data = doc.data();
@@ -40,7 +45,12 @@ export function useShouts(userLocation, radiusMiles = 10) {
                 const createdAt = data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.createdAt instanceof Date ? data.createdAt.getTime() : (data.createdAt || Date.now()));
                 const isExpired = (now - createdAt) > (24 * 60 * 60 * 1000);
 
-                if (!uniqueMap.has(doc.id) && distanceInM <= radiusInM && !isExpired) {
+                const isWithin = distanceInM <= radiusInM;
+                if (!isWithin) {
+                    console.log(`[useShouts] Filtered out ${doc.id}. Dist: ${Math.round(distanceInM)}m > Radius: ${Math.round(radiusInM)}m`);
+                }
+
+                if (!uniqueMap.has(doc.id) && isWithin && !isExpired) {
                     uniqueMap.set(doc.id, { id: doc.id, ...data });
                 }
             });
@@ -52,6 +62,7 @@ export function useShouts(userLocation, radiusMiles = 10) {
                 return tB - tA;
             });
 
+            console.log(`[useShouts] Final Filtered Count: ${sorted.length}. userLocation: ${JSON.stringify(center)}, radius: ${radiusMiles}mi (${Math.round(radiusInM)}m)`);
             setShouts(sorted);
             setLoading(false);
         };

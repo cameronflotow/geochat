@@ -47,6 +47,18 @@ export default function Home() {
         }
     }, [notification]);
 
+    // Persist Radius
+    useEffect(() => {
+        const saved = localStorage.getItem('geochat_radius');
+        if (saved) {
+            setShoutRadius(Number(saved));
+        }
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem('geochat_radius', shoutRadius);
+    }, [shoutRadius]);
+
     useEffect(() => {
         const agreed = localStorage.getItem('geochat_terms_accepted');
         if (!agreed) {
@@ -185,22 +197,13 @@ export default function Home() {
         });
     }, [chats, location, shoutRadius]);
 
-    const filteredShouts = useMemo(() => {
-        if (!location || !shouts) return [];
-        const radiusKm = shoutRadius * 1.60934;
-        return shouts.filter(shout => {
-            if (!shout.lat || !shout.lng) return false;
-            const distKm = distanceBetween([location.lat, location.lng], [shout.lat, shout.lng]);
-            return distKm <= radiusKm;
-        });
-    }, [shouts, location, shoutRadius]);
-
     return (
         <main className="w-screen h-[100dvh] relative overflow-hidden bg-black">
             <Map
                 userLocation={location}
                 chats={filteredChats}
-                shouts={filteredShouts}
+                shouts={shouts}
+                shoutRadius={shoutRadius}
                 currentUser={user}
                 onChatClick={handleChatClick}
                 highlightedChatIds={highlightedChats}

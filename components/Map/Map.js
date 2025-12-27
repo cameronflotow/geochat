@@ -40,7 +40,7 @@ function RecenterMap({ lat, lng }) {
     return null;
 }
 
-export default function Map({ userLocation, chats, shouts = [], currentUser, onChatClick, highlightedChatIds = [], mapItems = [], canCollectItem, onCollectItem, onTooFarClick }) {
+export default function Map({ userLocation, chats, shouts = [], shoutRadius = 10, currentUser, onChatClick, highlightedChatIds = [], mapItems = [], canCollectItem, onCollectItem, onTooFarClick }) {
     const defaultPosition = [37.7749, -122.4194];
 
     const [myEmoji, setMyEmoji] = useState(null);
@@ -125,6 +125,18 @@ export default function Map({ userLocation, chats, shouts = [], currentUser, onC
             return R * c;
         };
 
+        // Safety Filter Helper (Duplicated for failsafe independent of hook)
+        const getDistMeters = (p1, p2) => {
+            const R = 6371e3;
+            const φ1 = p1.lat * Math.PI / 180;
+            const φ2 = p2.lat * Math.PI / 180;
+            const Δφ = (p2.lat - p1.lat) * Math.PI / 180;
+            const Δλ = (p2.lng - p1.lng) * Math.PI / 180;
+            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        };
+
         for (const s of sorted) {
             if (!s.isPinned) continue;
             if (isOverlappingChat(s)) continue;
@@ -143,6 +155,23 @@ export default function Map({ userLocation, chats, shouts = [], currentUser, onC
             className="w-full h-full z-0 bg-black"
             zoomControl={false}
         >
+            {/* DEBUG OVERLAY */}
+            <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 9999, background: 'rgba(0,0,0,0.7)', color: 'lime', padding: '10px', borderRadius: '8px', fontSize: '10px', pointerEvents: 'none', whiteSpace: 'pre' }}>
+                RADIUS: {shoutRadius}mi ({Math.round(shoutRadius * 1609.34)}m)
+                {'\n'}VISIBLE SHOUTS: {visibleShouts.filter(s => {
+                    const R = 6371e3;
+                    if (!userLocation) return false;
+                    const φ1 = userLocation.lat * Math.PI / 180;
+                    const φ2 = s.lat * Math.PI / 180;
+                    const Δφ = (s.lat - userLocation.lat) * Math.PI / 180;
+                    const Δλ = (s.lng - userLocation.lng) * Math.PI / 180;
+                    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                    const d = R * c;
+                    return d <= (shoutRadius * 1609.34);
+                }).length} / {shouts.length}
+            </div>
+
             <TileLayer
                 attribution='&copy; OpenStreetMap'
                 url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
@@ -209,76 +238,153 @@ export default function Map({ userLocation, chats, shouts = [], currentUser, onC
             })}
 
             {/* PINNED SHOUTS (Middle Layer) */}
-            {visibleShouts.map(shout => (
-                <Marker
-                    key={shout.id}
-                    position={[shout.lat, shout.lng]}
-                    zIndexOffset={500}
-                    icon={new L.DivIcon({
-                        className: 'shout-marker',
-                        html: `<div class="relative w-[60px] h-[60px] rounded-full border-4 border-white shadow-xl overflow-hidden bg-gray-800 transition-transform hover:scale-110">
-                                <img src="${shout.userPhoto || `https://ui-avatars.com/api/?name=${shout.userName}&background=random`}" class="w-full h-full object-cover" />
-                                <div class="absolute bottom-0 right-0 bg-white rounded-full p-1 shadow-sm border border-gray-200">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                                </div>
-                               </div>`,
-                        iconSize: [60, 60],
-                        iconAnchor: [30, 30],
-                        popupAnchor: [0, -30]
-                    })}
-                >
-                    <Popup className="shout-popup" closeButton={false}>
-                        <div className="p-1 min-w-[200px]">
-                            <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-100">
-                                <div className="flex items-center gap-2">
-                                    <span className="font-bold text-sm text-gray-900">{shout.userName}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    {/* Like Button */}
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (!currentUser) return;
-                                            const ref = doc(db, 'shouts', shout.id);
-                                            const liked = shout.likes?.includes(currentUser.uid);
-                                            updateDoc(ref, { likes: liked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid) }).catch(console.error);
-                                        }}
-                                        className="group flex items-center gap-1 text-gray-400 hover:text-pink-500 transition-colors bg-gray-100 px-2 py-1 rounded-full"
-                                    >
-                                        <Heart
-                                            size={12}
-                                            className={shout.likes?.includes(currentUser?.uid) ? "fill-pink-500 text-pink-500" : ""}
-                                        />
-                                        <span className="text-xs font-bold">{shout.likes?.length || 0}</span>
-                                    </button>
+            {visibleShouts.map(shout => {
+                // FAILSAFE VISUAL FILTER
+                if (userLocation) {
+                    const R = 6371e3;
+                    const φ1 = userLocation.lat * Math.PI / 180;
+                    const φ2 = shout.lat * Math.PI / 180;
+                    const Δφ = (shout.lat - userLocation.lat) * Math.PI / 180;
+                    const Δλ = (shout.lng - userLocation.lng) * Math.PI / 180;
+                    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                    const d = R * c;
+                    if (d > (shoutRadius * 1609.34)) return null;
+                }
 
-                                    {currentUser?.uid === shout.userId && (
+                return (
+                    <Marker
+                        key={shout.id}
+                        position={[shout.lat, shout.lng]}
+                        zIndexOffset={500}
+                        icon={new L.DivIcon({
+                            className: 'shout-marker-container', // Custom class for global overrides
+                            iconSize: [60, 60],
+                            iconAnchor: [30, 30],
+                            popupAnchor: [0, -30],
+                            html: `
+                                <div style="
+                                    position: relative !important;
+                                    width: 60px !important;
+                                    height: 60px !important;
+                                    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+                                    background-color: #1f2937 !important;
+                                    border-radius: 50% !important;
+                                    display: flex !important; /* Backup centering */
+                                    align-items: center !important;
+                                    justify-content: center !important;
+                                    margin: 0 !important;
+                                    padding: 0 !important;
+                                    box-sizing: border-box !important;
+                                ">
+                                    <!-- IMAGE LAYER: Absolutely aligned to fill 100% -->
+                                    <img 
+                                        src="${(shout.userPhoto || `https://ui-avatars.com/api/?name=${shout.userName}&background=random`).replace(/'/g, "%27")}" 
+                                        alt="${shout.userName}"
+                                        style="
+                                            position: absolute !important;
+                                            top: 0 !important;
+                                            left: 0 !important;
+                                            width: 100% !important;
+                                            height: 100% !important;
+                                            object-fit: cover !important;
+                                            object-position: center !important;
+                                            border-radius: 50% !important;
+                                            display: block !important;
+                                            margin: 0 !important;
+                                            padding: 0 !important;
+                                            border: none !important;
+                                        "
+                                    />
+                                    
+                                    <!-- BORDER RING OVERLAY: Absolute on top -->
+                                    <div style="
+                                        position: absolute;
+                                        top: 0;
+                                        left: 0;
+                                        width: 100%;
+                                        height: 100%;
+                                        border: 4px solid white;
+                                        border-radius: 50%;
+                                        pointer-events: none;
+                                        box-sizing: border-box;
+                                        z-index: 5;
+                                    "></div>
+
+                                    <!-- ICON BADGE -->
+                                    <div style="
+                                        position: absolute;
+                                        bottom: 0px;
+                                        right: 0px;
+                                        background-color: white;
+                                        border-radius: 9999px;
+                                        padding: 4px;
+                                        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+                                        border: 1px solid #e5e7eb;
+                                        z-index: 10;
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                    ">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: block;"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></svg>
+                                    </div>
+                                </div>
+                            `
+                        })}
+                    >
+                        <Popup className="shout-popup" closeButton={false}>
+                            <div className="p-1 min-w-[200px]">
+                                <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-100">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-bold text-sm text-gray-900">{shout.userName}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {/* Like Button */}
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                if (confirm('Delete this shout?')) {
-                                                    deleteDoc(doc(db, "shouts", shout.id))
-                                                        .catch(error => {
-                                                            console.error("Delete failed:", error);
-                                                            alert("Could not delete shout. Try again.");
-                                                        });
-                                                }
+                                                if (!currentUser) return;
+                                                const ref = doc(db, 'shouts', shout.id);
+                                                const liked = shout.likes?.includes(currentUser.uid);
+                                                updateDoc(ref, { likes: liked ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid) }).catch(console.error);
                                             }}
-                                            className="p-1 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded transition-colors"
-                                            title="Delete Shout"
+                                            className="group flex items-center gap-1 text-gray-400 hover:text-pink-500 transition-colors bg-gray-100 px-2 py-1 rounded-full"
                                         >
-                                            <Trash2 size={14} />
+                                            <Heart
+                                                size={12}
+                                                className={shout.likes?.includes(currentUser?.uid) ? "fill-pink-500 text-pink-500" : ""}
+                                            />
+                                            <span className="text-xs font-bold">{shout.likes?.length || 0}</span>
                                         </button>
-                                    )}
+
+                                        {currentUser?.uid === shout.userId && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (confirm('Delete this shout?')) {
+                                                        deleteDoc(doc(db, "shouts", shout.id))
+                                                            .catch(error => {
+                                                                console.error("Delete failed:", error);
+                                                                alert("Could not delete shout. Try again.");
+                                                            });
+                                                    }
+                                                }}
+                                                className="p-1 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded transition-colors"
+                                                title="Delete Shout"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="text-gray-800 text-sm leading-relaxed break-words font-medium">
+                                    "{shout.text}"
                                 </div>
                             </div>
-                            <div className="text-gray-800 text-sm leading-relaxed break-words font-medium">
-                                "{shout.text}"
-                            </div>
-                        </div>
-                    </Popup>
-                </Marker>
-            ))}
+                        </Popup>
+                    </Marker>
+                )
+            })}
 
             {/* SHARED EMOJI ITEMS (Render Last -> Top Layer) */}
             {mapItems?.map(item => {
