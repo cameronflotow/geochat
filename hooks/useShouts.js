@@ -35,7 +35,8 @@ export function useShouts(userLocation) {
 
                 // TTL Check (24h)
                 const now = Date.now();
-                const createdAt = data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.createdAt || 0);
+                // Handle pending serverTimestamp (null) by assuming it's new (Date.now())
+                const createdAt = data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.createdAt instanceof Date ? data.createdAt.getTime() : (data.createdAt || Date.now()));
                 const isExpired = (now - createdAt) > (24 * 60 * 60 * 1000);
 
                 if (!uniqueMap.has(doc.id) && distanceInM <= SHOUT_RADIUS_M && !isExpired) {

@@ -98,8 +98,8 @@ export default function ShoutsModal({ isOpen, onClose, userLocation, user }) {
     };
 
     return (
-        <div className="fixed inset-0 z-[1500] flex items-end sm:items-center justify-center pointer-events-none">
-            <div className="pointer-events-auto bg-black/80 backdrop-blur-xl w-full sm:max-w-md h-[80vh] sm:h-[650px] sm:rounded-3xl border-t sm:border border-white/10 flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-300">
+        <div className="fixed inset-0 z-[1500] flex justify-center pointer-events-none">
+            <div className="pointer-events-auto bg-black/80 backdrop-blur-xl w-full sm:max-w-md h-full border-x border-white/10 flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-300">
 
                 {/* Header */}
                 <div className="p-5 border-b border-white/10 flex items-center justify-between bg-white/5 backdrop-blur-md sticky top-0 z-10">
