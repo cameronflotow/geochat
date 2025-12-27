@@ -21,6 +21,26 @@ export default function UserProfileModal({ isOpen, onClose, user }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
+    // Color Slider State
+    const [markerHue, setMarkerHue] = useState(145); // Default Green
+
+    useEffect(() => {
+        if (userData?.markerColor?.startsWith('hsl')) {
+            const h = userData.markerColor.match(/hsl\((\d+)/)?.[1];
+            if (h) setMarkerHue(parseInt(h));
+        }
+    }, [userData?.markerColor]);
+
+    const handleHueChange = (val) => {
+        setMarkerHue(val);
+    };
+
+    const saveMarkerColor = async () => {
+        if (!user?.uid) return;
+        const color = `hsl(${markerHue}, 75%, 50%)`;
+        await updateDoc(doc(db, "users", user.uid), { markerColor: color });
+    };
+
     const fileInputRef = useRef(null);
 
     useEffect(() => {
@@ -443,26 +463,32 @@ export default function UserProfileModal({ isOpen, onClose, user }) {
 
                             {/* MARKER COLOR SELECTOR */}
                             <div className="space-y-3">
-                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Map Marker Color</span>
-                                <div className="flex flex-wrap gap-2">
-                                    {[
-                                        '#16a34a', // Green (Default)
-                                        '#2563eb', // Blue
-                                        '#9333ea', // Purple
-                                        '#db2777', // Pink
-                                        '#dc2626', // Red
-                                        '#ea580c', // Orange
-                                        '#ca8a04', // Yellow
-                                        '#0d9488', // Teal
-                                        '#fff'     // White
-                                    ].map(color => (
-                                        <button
-                                            key={color}
-                                            onClick={() => updateDoc(doc(db, "users", user.uid), { markerColor: color })}
-                                            className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${userData?.markerColor === color || (!userData?.markerColor && color === '#16a34a') ? 'border-white scale-110 shadow-[0_0_10px_rgba(255,255,255,0.5)]' : 'border-transparent opacity-50 hover:opacity-100'}`}
-                                            style={{ backgroundColor: color }}
+                                <div className="flex justify-between items-center px-1">
+                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Map Marker Color</span>
+                                    <span className="text-xs font-bold" style={{ color: `hsl(${markerHue}, 75%, 50%)` }}>Preview</span>
+                                </div>
+
+                                <div className="bg-white/5 rounded-xl p-4 border border-white/5 flex items-center gap-4">
+                                    {/* Preview Dot */}
+                                    <div
+                                        className="w-10 h-10 rounded-full border-4 border-white shadow-lg shrink-0 transition-colors duration-200"
+                                        style={{ backgroundColor: `hsl(${markerHue}, 75%, 50%)` }}
+                                    />
+
+                                    {/* Slider */}
+                                    <div className="flex-1 relative h-6 flex items-center">
+                                        <div className="absolute inset-0 rounded-full opacity-80" style={{ background: 'linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)' }} />
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="360"
+                                            value={markerHue}
+                                            onChange={(e) => handleHueChange(e.target.value)}
+                                            onMouseUp={saveMarkerColor}
+                                            onTouchEnd={saveMarkerColor}
+                                            className="w-full relative z-10 appearance-none bg-transparent [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-gray-400 [&::-webkit-slider-thumb]:shadow-lg cursor-pointer"
                                         />
-                                    ))}
+                                    </div>
                                 </div>
                             </div>
 
