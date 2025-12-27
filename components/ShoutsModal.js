@@ -113,20 +113,20 @@ export default function ShoutsModal({ isOpen, onClose, userLocation, user, shout
 
                         <div className="relative">
                             <button
-                                onClick={() => setShowRadiusMenu(!showRadiusMenu)}
-                                className="px-2 py-0.5 bg-white/10 hover:bg-white/20 rounded-full text-[10px] font-bold text-gray-400 hover:text-white transition-colors flex items-center gap-1"
+                                onClick={(e) => { e.stopPropagation(); setShowRadiusMenu(!showRadiusMenu); }}
+                                className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded-full text-xs font-bold text-gray-300 hover:text-white transition-colors flex items-center gap-1 border border-white/5"
                             >
                                 {radius}mi
                             </button>
                             {showRadiusMenu && (
                                 <>
-                                    <div className="fixed inset-0 z-40" onClick={() => setShowRadiusMenu(false)} />
-                                    <div className="absolute top-full left-0 mt-1 bg-gray-900 border border-white/10 rounded-lg overflow-hidden shadow-xl z-50 min-w-[60px]">
+                                    <div className="fixed inset-0 z-[60]" onClick={(e) => { e.stopPropagation(); setShowRadiusMenu(false); }} />
+                                    <div className="absolute top-full left-0 mt-2 bg-gray-900 border border-white/20 rounded-xl overflow-hidden shadow-2xl z-[70] min-w-[80px]">
                                         {[1, 5, 10].map(r => (
                                             <button
                                                 key={r}
-                                                onClick={() => { setRadius(r); setShowRadiusMenu(false); }}
-                                                className={`w-full text-left px-3 py-2 text-xs font-bold hover:bg-white/10 ${radius === r ? 'text-purple-400 bg-white/5' : 'text-gray-400'}`}
+                                                onClick={(e) => { e.stopPropagation(); setRadius(r); setShowRadiusMenu(false); }}
+                                                className={`w-full text-left px-4 py-2.5 text-xs font-bold hover:bg-white/10 transition-colors ${radius === r ? 'text-purple-400 bg-white/5' : 'text-gray-400'}`}
                                             >
                                                 {r}mi
                                             </button>
@@ -210,7 +210,7 @@ export default function ShoutsModal({ isOpen, onClose, userLocation, user, shout
                                 onChange={(e) => setText(e.target.value)}
                                 placeholder="Shout..."
                                 maxLength={200}
-                                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-3 pr-10 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all font-medium"
+                                className="w-full bg-white/5 border border-white/10 rounded-xl pl-3 pr-10 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all font-medium text-sm"
                                 onKeyDown={(e) => e.key === 'Enter' && handlePostCapped(text)}
                             />
                             <div className="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded-md text-[10px] font-medium text-gray-500">
@@ -220,7 +220,7 @@ export default function ShoutsModal({ isOpen, onClose, userLocation, user, shout
 
                         <button
                             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                            className={`p-2 rounded-2xl transition-all duration-200 hover:scale-105 active:scale-95 shrink-0 ${showEmojiPicker ? 'bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]' : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white'}`}
+                            className={`p-2 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95 shrink-0 ${showEmojiPicker ? 'bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]' : 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white'}`}
                         >
                             <Smile className="w-5 h-5" />
                         </button>
@@ -228,7 +228,7 @@ export default function ShoutsModal({ isOpen, onClose, userLocation, user, shout
                         <button
                             onClick={() => handlePostCapped(text)}
                             disabled={!text.trim() || sending}
-                            className="p-2 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-2xl text-white shadow-lg shadow-purple-500/20 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all duration-200 shrink-0"
+                            className="p-2 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-xl text-white shadow-lg shadow-purple-500/20 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-purple-500/40 hover:scale-105 active:scale-95 transition-all duration-200 shrink-0"
                         >
                             {sending ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Megaphone className="w-5 h-5" />}
                         </button>
