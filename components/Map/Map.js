@@ -13,13 +13,14 @@ const iconUrl = 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png';
 const iconRetinaUrl = 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png';
 const shadowUrl = 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png';
 
-delete L.Icon.Default.prototype._getIconUrl;
-
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: iconRetinaUrl,
-    iconUrl: iconUrl,
-    shadowUrl: shadowUrl,
-});
+if (typeof window !== 'undefined') {
+    delete L.Icon.Default.prototype._getIconUrl;
+    L.Icon.Default.mergeOptions({
+        iconRetinaUrl: iconRetinaUrl,
+        iconUrl: iconUrl,
+        shadowUrl: shadowUrl,
+    });
+}
 
 
 

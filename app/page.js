@@ -22,6 +22,11 @@ import { deleteChatFully } from '@/lib/db-cleanup';
 import { doc, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useEmojiSystem } from '@/hooks/useEmojiSystem';
 
+const Map = dynamic(() => import('@/components/Map/Map'), {
+    loading: () => <div className="w-full h-full flex items-center justify-center text-primary bg-black">Loading Geochat...</div>,
+    ssr: false
+});
+
 export default function Home() {
     const [user, setUser] = useState(null);
     const [userData, setUserData] = useState(null);
@@ -29,16 +34,20 @@ export default function Home() {
     const [isCreateChatOpen, setIsCreateChatOpen] = useState(false);
     const [isShareOpen, setIsShareOpen] = useState(false);
     const [isShoutsOpen, setIsShoutsOpen] = useState(false);
-    const { location, error: locationError } = useLocation();
-    const { chats, loading: chatsLoading } = useChats(location);
-    const { shouts } = useShouts(location, shoutRadius);
-    const { nearbyItems, canCollectItem, collectItem } = useEmojiSystem(location, user);
-    const router = useRouter();
 
+    // State must be declared BEFORE usage in hooks
     const [highlightedChats, setHighlightedChats] = useState([]);
     const [showWelcome, setShowWelcome] = useState(false);
     const [notification, setNotification] = useState(null);
     const [shoutRadius, setShoutRadius] = useState(10); // Default 10mi
+
+    const { location, error: locationError } = useLocation();
+    const router = useRouter();
+
+    // Hooks dependent on state/location
+    const { chats, loading: chatsLoading } = useChats(location);
+    const { shouts } = useShouts(location, shoutRadius);
+    const { nearbyItems, canCollectItem, collectItem } = useEmojiSystem(location, user);
 
     useEffect(() => {
         if (notification) {
@@ -148,14 +157,7 @@ export default function Home() {
         cleanupExpiredChats();
     }, [chats]);
 
-    const Map = useMemo(() => dynamic(
-        () => import('@/components/Map/Map'),
-        {
-            loading: () => <div className="w-full h-full flex items-center justify-center text-primary bg-black">Loading Geochat...</div>,
-            ssr: false
-        }
-    ), []);
-
+    // Map definition moved to top level
     const handleChatClick = (chat, isActive) => {
         if (isActive) {
             router.push(`/chat/${chat.id}`);
