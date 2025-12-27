@@ -109,11 +109,11 @@ export default function ShoutItem({ shout, user, handleUserClick }) {
                         onClick={() => handleUserClick(shout.userId, shout.userName, shout.userPhoto)}
                         className="w-10 h-10 rounded-full bg-gray-800 overflow-hidden shrink-0 border border-white/10 cursor-pointer shadow-lg"
                     >
-                        {(shout.userId === user?.uid ? user?.photoURL : shout.userPhoto) ? (
-                            <img src={(shout.userId === user?.uid ? user.photoURL : shout.userPhoto)} className="w-full h-full object-cover" />
+                        {shout.userPhoto ? (
+                            <img src={shout.userPhoto} className="w-full h-full object-cover" />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-indigo-600 text-white font-bold text-sm">
-                                {(shout.userId === user?.uid ? user?.displayName : shout.userName)?.[0]?.toUpperCase()}
+                                {shout.userName?.[0]?.toUpperCase()}
                             </div>
                         )}
                     </div>
