@@ -108,7 +108,7 @@ export default function ShoutItem({ shout, user, handleUserClick }) {
                 <div className="relative">
                     <div
                         onClick={() => handleUserClick(shout.userId, shout.userName, shout.userPhoto)}
-                        className="w-10 h-10 rounded-full bg-gray-800 overflow-hidden shrink-0 border border-white/10 cursor-pointer shadow-lg"
+                        className="w-10 h-10 rounded-full bg-gray-800 overflow-hidden shrink-0 border border-white/10 cursor-pointer shadow-lg flex items-center justify-center"
                     >
                         {shout.userPhoto && !imgError ? (
                             <img
