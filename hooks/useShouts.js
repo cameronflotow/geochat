@@ -5,7 +5,7 @@ import { db } from '@/lib/firebase';
 
 const SHOUT_RADIUS_M = 1 * 1609.34; // 1 mile in meters (~1609m)
 
-export function useShouts(userLocation) {
+export function useShouts(userLocation, radiusMiles = 10) {
     const [shouts, setShouts] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -16,8 +16,9 @@ export function useShouts(userLocation) {
             return;
         }
 
+        const radiusInM = radiusMiles * 1609.34;
         const center = [userLocation.lat, userLocation.lng];
-        const bounds = geohashQueryBounds(center, SHOUT_RADIUS_M);
+        const bounds = geohashQueryBounds(center, radiusInM);
 
         const listeners = [];
         const resultsByBound = new Map();
@@ -39,7 +40,7 @@ export function useShouts(userLocation) {
                 const createdAt = data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.createdAt instanceof Date ? data.createdAt.getTime() : (data.createdAt || Date.now()));
                 const isExpired = (now - createdAt) > (24 * 60 * 60 * 1000);
 
-                if (!uniqueMap.has(doc.id) && distanceInM <= SHOUT_RADIUS_M && !isExpired) {
+                if (!uniqueMap.has(doc.id) && distanceInM <= radiusInM && !isExpired) {
                     uniqueMap.set(doc.id, { id: doc.id, ...data });
                 }
             });
@@ -76,7 +77,7 @@ export function useShouts(userLocation) {
         return () => {
             listeners.forEach(unsub => unsub());
         };
-    }, [userLocation?.lat, userLocation?.lng]);
+    }, [userLocation?.lat, userLocation?.lng, radiusMiles]);
 
     return { shouts, loading };
 }

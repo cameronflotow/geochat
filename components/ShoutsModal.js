@@ -11,7 +11,12 @@ import ShoutItem from './ShoutItem';
 import EmojiInventoryGrid from './EmojiInventoryGrid';
 
 export default function ShoutsModal({ isOpen, onClose, userLocation, user }) {
-    const { shouts, loading } = useShouts(userLocation);
+    const [radius, setRadius] = useState(10); // Default 10mi
+    const { shouts, loading } = useShouts(userLocation, radius);
+
+    // UI State
+    const [showRadiusMenu, setShowRadiusMenu] = useState(false);
+
     const [text, setText] = useState('');
     const [isPinned, setIsPinned] = useState(true);
     const [sending, setSending] = useState(false);
@@ -108,7 +113,31 @@ export default function ShoutsModal({ isOpen, onClose, userLocation, user }) {
                             <Megaphone className="w-5 h-5" />
                         </div>
                         <h2 className="font-bold text-white text-lg">Local Shouts</h2>
-                        <span className="px-2 py-0.5 bg-white/10 rounded-full text-[10px] font-bold text-gray-400">1mi</span>
+
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowRadiusMenu(!showRadiusMenu)}
+                                className="px-2 py-0.5 bg-white/10 hover:bg-white/20 rounded-full text-[10px] font-bold text-gray-400 hover:text-white transition-colors flex items-center gap-1"
+                            >
+                                {radius}mi
+                            </button>
+                            {showRadiusMenu && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setShowRadiusMenu(false)} />
+                                    <div className="absolute top-full left-0 mt-1 bg-gray-900 border border-white/10 rounded-lg overflow-hidden shadow-xl z-50 min-w-[60px]">
+                                        {[1, 5, 10].map(r => (
+                                            <button
+                                                key={r}
+                                                onClick={() => { setRadius(r); setShowRadiusMenu(false); }}
+                                                className={`w-full text-left px-3 py-2 text-xs font-bold hover:bg-white/10 ${radius === r ? 'text-purple-400 bg-white/5' : 'text-gray-400'}`}
+                                            >
+                                                {r}mi
+                                            </button>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                        </div>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors">
                         <X className="w-6 h-6" />
