@@ -185,12 +185,22 @@ export default function Home() {
         });
     }, [chats, location, shoutRadius]);
 
+    const filteredShouts = useMemo(() => {
+        if (!location || !shouts) return [];
+        const radiusKm = shoutRadius * 1.60934;
+        return shouts.filter(shout => {
+            if (!shout.lat || !shout.lng) return false;
+            const distKm = distanceBetween([location.lat, location.lng], [shout.lat, shout.lng]);
+            return distKm <= radiusKm;
+        });
+    }, [shouts, location, shoutRadius]);
+
     return (
         <main className="w-screen h-[100dvh] relative overflow-hidden bg-black">
             <Map
                 userLocation={location}
                 chats={filteredChats}
-                shouts={shouts}
+                shouts={filteredShouts}
                 currentUser={user}
                 onChatClick={handleChatClick}
                 highlightedChatIds={highlightedChats}
