@@ -270,14 +270,12 @@ export default function Map({ userLocation, chats, shouts = [], shoutRadius = 10
                                     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
                                     background-color: #1f2937 !important;
                                     border-radius: 50% !important;
-                                    display: flex !important; /* Backup centering */
-                                    align-items: center !important;
-                                    justify-content: center !important;
+                                    overflow: hidden !important; /* CRITICAL: Clip corner artifacts */
                                     margin: 0 !important;
                                     padding: 0 !important;
-                                    box-sizing: border-box !important;
+                                    border: none !important;
                                 ">
-                                    <!-- IMAGE LAYER: Absolutely aligned to fill 100% -->
+                                    <!-- IMAGE LAYER: Explicit 60x60 -->
                                     <img 
                                         src="${(shout.userPhoto || `https://ui-avatars.com/api/?name=${shout.userName}&background=random`).replace(/'/g, "%27")}" 
                                         alt="${shout.userName}"
@@ -285,11 +283,10 @@ export default function Map({ userLocation, chats, shouts = [], shoutRadius = 10
                                             position: absolute !important;
                                             top: 0 !important;
                                             left: 0 !important;
-                                            width: 100% !important;
-                                            height: 100% !important;
+                                            width: 60px !important;
+                                            height: 60px !important;
                                             object-fit: cover !important;
                                             object-position: center !important;
-                                            border-radius: 50% !important;
                                             display: block !important;
                                             margin: 0 !important;
                                             padding: 0 !important;

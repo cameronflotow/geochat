@@ -130,11 +130,11 @@ path.animate-pulse-color {
 }
 
 /* NUCLEAR RESET for Shout Markers */
+/* NUCLEAR RESET for Shout Markers */
 .leaflet-div-icon.shout-marker-container {
   background: transparent !important;
   border: none !important;
-  margin-left: -30px !important; /* Ensure anchor logic isn't overridden */
-  margin-top: -30px !important;
+  /* margins are handled by Leaflet iconAnchor - DO NOT OVERRIDE */
   width: 60px !important;
   height: 60px !important;
 }
