@@ -257,7 +257,11 @@ export default function Map({ userLocation, chats, shouts = [], currentUser, onC
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 if (confirm('Delete this shout?')) {
-                                                    deleteDoc(doc(db, "shouts", shout.id));
+                                                    deleteDoc(doc(db, "shouts", shout.id))
+                                                        .catch(error => {
+                                                            console.error("Delete failed:", error);
+                                                            alert("Could not delete shout. Try again.");
+                                                        });
                                                 }
                                             }}
                                             className="p-1 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded transition-colors"

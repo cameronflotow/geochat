@@ -11,6 +11,7 @@ export default function ShoutItem({ shout, user, handleUserClick }) {
     const [commentText, setCommentText] = useState('');
     const [sending, setSending] = useState(false);
     const [deletingId, setDeletingId] = useState(null); // 'shout' or commentId
+    const [imgError, setImgError] = useState(false); // Image Fallback State
 
     const isLiked = shout.likes?.includes(user?.uid);
     const isMine = shout.userId === user?.uid;
@@ -109,8 +110,12 @@ export default function ShoutItem({ shout, user, handleUserClick }) {
                         onClick={() => handleUserClick(shout.userId, shout.userName, shout.userPhoto)}
                         className="w-10 h-10 rounded-full bg-gray-800 overflow-hidden shrink-0 border border-white/10 cursor-pointer shadow-lg"
                     >
-                        {shout.userPhoto ? (
-                            <img src={shout.userPhoto} className="w-full h-full object-cover" />
+                        {shout.userPhoto && !imgError ? (
+                            <img
+                                src={shout.userPhoto}
+                                className="w-full h-full object-cover"
+                                onError={() => setImgError(true)}
+                            />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-500 to-indigo-600 text-white font-bold text-sm">
                                 {shout.userName?.[0]?.toUpperCase()}
