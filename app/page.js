@@ -30,13 +30,14 @@ export default function Home() {
     const [isShoutsOpen, setIsShoutsOpen] = useState(false);
     const { location, error: locationError } = useLocation();
     const { chats, loading: chatsLoading } = useChats(location);
-    const { shouts } = useShouts(location);
+    const { shouts } = useShouts(location, shoutRadius);
     const { nearbyItems, canCollectItem, collectItem } = useEmojiSystem(location, user);
     const router = useRouter();
 
     const [highlightedChats, setHighlightedChats] = useState([]);
     const [showWelcome, setShowWelcome] = useState(false);
     const [notification, setNotification] = useState(null);
+    const [shoutRadius, setShoutRadius] = useState(10); // Default 10mi
 
     useEffect(() => {
         if (notification) {
@@ -266,6 +267,9 @@ export default function Home() {
                 onClose={() => setIsShoutsOpen(false)}
                 userLocation={location}
                 user={user}
+                shouts={shouts}
+                radius={shoutRadius}
+                setRadius={setShoutRadius}
             />
 
             <ShareModal

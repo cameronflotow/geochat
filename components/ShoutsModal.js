@@ -10,10 +10,7 @@ import PrivateChatModal from './PrivateChatModal';
 import ShoutItem from './ShoutItem';
 import EmojiInventoryGrid from './EmojiInventoryGrid';
 
-export default function ShoutsModal({ isOpen, onClose, userLocation, user }) {
-    const [radius, setRadius] = useState(10); // Default 10mi
-    const { shouts, loading } = useShouts(userLocation, radius);
-
+export default function ShoutsModal({ isOpen, onClose, userLocation, user, shouts, loading, radius, setRadius }) {
     // UI State
     const [showRadiusMenu, setShowRadiusMenu] = useState(false);
 
