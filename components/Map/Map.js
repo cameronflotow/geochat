@@ -258,73 +258,49 @@ export default function Map({ userLocation, chats, shouts = [], shoutRadius = 10
                         position={[shout.lat, shout.lng]}
                         zIndexOffset={500}
                         icon={new L.DivIcon({
-                            className: 'shout-marker-container', // Custom class for global overrides
+                            className: 'shout-marker-container',
                             iconSize: [60, 60],
                             iconAnchor: [30, 30],
                             popupAnchor: [0, -30],
                             html: `
                                 <div style="
-                                    position: relative !important;
-                                    width: 60px !important;
-                                    height: 60px !important;
-                                    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
-                                    background-color: #1f2937 !important;
-                                    border-radius: 50% !important;
-                                    overflow: hidden !important; /* CRITICAL: Clip corner artifacts */
-                                    margin: 0 !important;
-                                    padding: 0 !important;
-                                    border: none !important;
+                                    width: 60px; 
+                                    height: 60px; 
+                                    background: #1f2937; 
+                                    border-radius: 50%;
+                                    border: 4px solid white; 
+                                    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); 
+                                    display: flex; 
+                                    align-items: center; 
+                                    justify-content: center; 
+                                    overflow: hidden;
                                 ">
-                                    <!-- IMAGE LAYER: Explicit 60x60 -->
                                     <img 
                                         src="${(shout.userPhoto || `https://ui-avatars.com/api/?name=${shout.userName}&background=random`).replace(/'/g, "%27")}" 
                                         alt="${shout.userName}"
                                         style="
-                                            position: absolute !important;
-                                            top: 0 !important;
-                                            left: 0 !important;
-                                            width: 60px !important;
-                                            height: 60px !important;
-                                            object-fit: cover !important;
-                                            object-position: center !important;
-                                            display: block !important;
-                                            margin: 0 !important;
-                                            padding: 0 !important;
-                                            border: none !important;
+                                            width: 100%; 
+                                            height: 100%; 
+                                            object-fit: cover; 
+                                            display: block;
                                         "
                                     />
-                                    
-                                    <!-- BORDER RING OVERLAY: Absolute on top -->
-                                    <div style="
-                                        position: absolute;
-                                        top: 0;
-                                        left: 0;
-                                        width: 100%;
-                                        height: 100%;
-                                        border: 4px solid white;
-                                        border-radius: 50%;
-                                        pointer-events: none;
-                                        box-sizing: border-box;
-                                        z-index: 5;
-                                    "></div>
-
-                                    <!-- ICON BADGE -->
-                                    <div style="
-                                        position: absolute;
-                                        bottom: 0px;
-                                        right: 0px;
-                                        background-color: white;
-                                        border-radius: 9999px;
-                                        padding: 4px;
-                                        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-                                        border: 1px solid #e5e7eb;
-                                        z-index: 10;
-                                        display: flex;
-                                        align-items: center;
-                                        justify-content: center;
-                                    ">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: block;"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></svg>
-                                    </div>
+                                </div>
+                                <!-- Badge -->
+                                <div style="
+                                    position: absolute; 
+                                    bottom: 0; 
+                                    right: 0; 
+                                    background: white; 
+                                    border-radius: 9999px; 
+                                    padding: 4px; 
+                                    display: flex; 
+                                    align-items: center; 
+                                    justify-content: center; 
+                                    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); 
+                                    border: 1px solid #e5e7eb;
+                                ">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></svg>
                                 </div>
                             `
                         })}
