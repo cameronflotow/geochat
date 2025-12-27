@@ -67,15 +67,14 @@ export default function EmojiInventoryGrid({ userId, className = '', onSelect })
                     const defaultEntries = DEFAULTS.filter(d => !inventory[d]).map(d => [d, 1]); // Mock count 1
 
                     // Split into Text vs Emoji
-                    // Text items > 2 chars (e.g. "Complicated")
-                    // Emoji items <= 2 chars (roughly, or just standard sort)
-                    const textItems = [...entries, ...defaultEntries].filter(([k]) => Array.from(k).length > 2).sort((a, b) => a[0].localeCompare(b[0]));
-                    const emojiItems = entries.filter(([k]) => Array.from(k).length <= 2).sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0])); // Stable sort based on counts then name
+                    const isTextStr = (str) => /[a-zA-Z]/.test(str);
+                    const textItems = [...entries, ...defaultEntries].filter(([k]) => isTextStr(k)).sort((a, b) => a[0].localeCompare(b[0]));
+                    const emojiItems = entries.filter(([k]) => !isTextStr(k)).sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0])); // Stable sort based on counts then name
 
                     return [...textItems, ...emojiItems].map(([emoji, count]) => {
                         const isUltraRare = ['🍑', '🍆', '👽', '🦄', '🐲', '💎'].includes(emoji);
                         const isSelected = userData?.selectedEmoji === emoji;
-                        const isText = Array.from(emoji).length > 2;
+                        const isText = isTextStr(emoji);
 
                         return (
                             <div

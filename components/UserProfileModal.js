@@ -404,13 +404,14 @@ export default function UserProfileModal({ isOpen, onClose, user }) {
                                                 const defaultEntries = DEFAULTS.filter(d => !inventory[d]).map(d => [d, 1]);
 
                                                 // Split into Text vs Emoji
-                                                const textItems = [...entries, ...defaultEntries].filter(([k]) => Array.from(k).length > 2).sort((a, b) => a[0].localeCompare(b[0]));
-                                                const emojiItems = entries.filter(([k]) => Array.from(k).length <= 2).sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0])); // Stable sort
+                                                const isTextStr = (str) => /[a-zA-Z]/.test(str);
+                                                const textItems = [...entries, ...defaultEntries].filter(([k]) => isTextStr(k)).sort((a, b) => a[0].localeCompare(b[0]));
+                                                const emojiItems = entries.filter(([k]) => !isTextStr(k)).sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0])); // Stable sort
 
                                                 return [...textItems, ...emojiItems].map(([emoji, count]) => {
                                                     const isUltraRare = ['🍑', '🍆', '👽', '🦄', '🐲', '💎'].includes(emoji);
                                                     const isSelected = userData?.selectedEmoji === emoji;
-                                                    const isText = Array.from(emoji).length > 2;
+                                                    const isText = isTextStr(emoji);
 
                                                     return (
                                                         <div

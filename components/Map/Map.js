@@ -276,16 +276,13 @@ export default function Map({ userLocation, chats, shouts = [], currentUser, onC
             {/* SHARED EMOJI ITEMS (Render Last -> Top Layer) */}
             {mapItems?.map(item => {
                 const isCatchable = canCollectItem && canCollectItem.id === item.id;
-                const isText = Array.from(item.emoji).length > 2; // Simple check for text vs emoji
 
                 // Glow/Anim logic
                 const glowClass = isCatchable ? 'drop-shadow-[0_0_15px_rgba(250,204,21,0.9)] scale-125 z-[1000]' : 'drop-shadow-xl opacity-80';
                 const animClass = isCatchable ? 'animate-bounce' : 'animate-pulse';
 
-                // Content Style
-                const contentHtml = isText
-                    ? `<div class="bg-white/90 backdrop-blur-sm text-black px-3 py-1.5 rounded-full font-bold text-[10px] whitespace-nowrap border border-purple-500/30 shadow-sm transform transition-all duration-300 ${glowClass} ${animClass}" style="animation-duration: ${isCatchable ? '1s' : '3s'}">${item.emoji}</div>`
-                    : `<div class="text-3xl transition-all duration-300 ${glowClass} ${animClass}" style="animation-duration: ${isCatchable ? '1s' : '3s'}">${item.emoji}</div>`;
+                // Content Style (Always Emoji)
+                const contentHtml = `<div class="text-3xl transition-all duration-300 ${glowClass} ${animClass}" style="animation-duration: ${isCatchable ? '1s' : '3s'}">${item.emoji}</div>`;
 
                 return (
                     <Marker
