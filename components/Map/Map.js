@@ -157,21 +157,7 @@ export default function Map({ userLocation, chats, shouts = [], shoutRadius = 10
             zoomControl={false}
         >
             {/* DEBUG OVERLAY */}
-            <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 9999, background: 'rgba(0,0,0,0.7)', color: 'lime', padding: '10px', borderRadius: '8px', fontSize: '10px', pointerEvents: 'none', whiteSpace: 'pre' }}>
-                RADIUS: {shoutRadius}mi ({Math.round(shoutRadius * 1609.34)}m)
-                {'\n'}VISIBLE SHOUTS: {visibleShouts.filter(s => {
-                    const R = 6371e3;
-                    if (!userLocation) return false;
-                    const φ1 = userLocation.lat * Math.PI / 180;
-                    const φ2 = s.lat * Math.PI / 180;
-                    const Δφ = (s.lat - userLocation.lat) * Math.PI / 180;
-                    const Δλ = (s.lng - userLocation.lng) * Math.PI / 180;
-                    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                    const d = R * c;
-                    return d <= (shoutRadius * 1609.34);
-                }).length} / {shouts.length}
-            </div>
+
 
             <TileLayer
                 attribution='&copy; OpenStreetMap'
