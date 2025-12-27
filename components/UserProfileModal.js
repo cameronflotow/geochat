@@ -7,7 +7,7 @@ import { ref, uploadBytes, getDownloadURL, deleteObject, listAll } from 'firebas
 import { doc, onSnapshot, deleteDoc, updateDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { auth, storage, db } from '@/lib/firebase';
 
-export default function UserProfileModal({ isOpen, onClose, user }) {
+export default function UserProfileModal({ isOpen, onClose, user, initialAuthMode = false }) {
     const [name, setName] = useState('');
     const [photoPreview, setPhotoPreview] = useState(null);
     const [pendingFile, setPendingFile] = useState(null);
@@ -16,7 +16,7 @@ export default function UserProfileModal({ isOpen, onClose, user }) {
     const [errorMessage, setErrorMessage] = useState('');
 
     // Auth Form State
-    const [isAuthMode, setIsAuthMode] = useState(false); // If true, shows login/signup
+    const [isAuthMode, setIsAuthMode] = useState(initialAuthMode); // If true, shows login/signup
     const [authType, setAuthType] = useState('signup'); // 'signup' or 'login'
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -50,7 +50,7 @@ export default function UserProfileModal({ isOpen, onClose, user }) {
             setPendingFile(null);
             setStatus('idle');
             setErrorMessage('');
-            setIsAuthMode(false); // Reset auth mode
+            setIsAuthMode(initialAuthMode); // Reset auth mode based on prop
 
             // Lazy Cleanup of Old Avatars (>24h)
             const cleanupOldAvatars = async () => {

@@ -15,6 +15,7 @@ import CreateChatModal from '@/components/CreateChatModal';
 import WelcomeModal from '@/components/WelcomeModal';
 import ShareModal from '@/components/ShareModal';
 import ShoutsModal from '@/components/ShoutsModal';
+import SignupPromptModal from '@/components/SignupPromptModal';
 import { useLocation } from '@/hooks/useLocation';
 import { useChats } from '@/hooks/useChats';
 import { useShouts } from '@/hooks/useShouts';
@@ -34,6 +35,10 @@ export default function Home() {
     const [isCreateChatOpen, setIsCreateChatOpen] = useState(false);
     const [isShareOpen, setIsShareOpen] = useState(false);
     const [isShoutsOpen, setIsShoutsOpen] = useState(false);
+
+    // Prompt State
+    const [isSignupPromptOpen, setIsSignupPromptOpen] = useState(false);
+    const [profileAuthMode, setProfileAuthMode] = useState(false);
 
     // State must be declared BEFORE usage in hooks
     const [highlightedChats, setHighlightedChats] = useState([]);
@@ -175,6 +180,15 @@ export default function Home() {
             const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3');
             audio.volume = 0.5;
             audio.play().catch(e => console.log("Audio play failed", e));
+
+            // Check for Anonymous First Collect
+            if (user?.isAnonymous) {
+                const hasSeenPrompt = localStorage.getItem('geochat_signup_prompt_shown');
+                if (!hasSeenPrompt) {
+                    setTimeout(() => setIsSignupPromptOpen(true), 1500); // Small delay for effect
+                    localStorage.setItem('geochat_signup_prompt_shown', 'true');
+                }
+            }
         } else {
             setNotification({
                 type: 'error',
@@ -302,12 +316,21 @@ export default function Home() {
 
             <UserProfileModal
                 isOpen={isProfileOpen}
-                onClose={() => setIsProfileOpen(false)}
+                onClose={() => { setIsProfileOpen(false); setProfileAuthMode(false); }}
                 user={user}
+                userData={userData}
+                initialAuthMode={profileAuthMode}
             />
 
-
-
+            <SignupPromptModal
+                isOpen={isSignupPromptOpen}
+                onClose={() => setIsSignupPromptOpen(false)}
+                onCreateAccount={() => {
+                    setIsSignupPromptOpen(false);
+                    setProfileAuthMode(true);
+                    setIsProfileOpen(true);
+                }}
+            />
             <CreateChatModal
                 isOpen={isCreateChatOpen}
                 onClose={() => setIsCreateChatOpen(false)}
