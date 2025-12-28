@@ -104,7 +104,7 @@ export default function ShoutsModal({ isOpen, onClose, userLocation, user, shout
             <div className="pointer-events-auto bg-black/80 backdrop-blur-xl w-full sm:max-w-md h-full border-x border-white/10 flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-300">
 
                 {/* Header */}
-                <div className="p-5 border-b border-white/10 flex items-center justify-between bg-white/5 backdrop-blur-md sticky top-0 z-10">
+                <div className="p-5 border-b border-white/10 flex items-center justify-between bg-white/5 backdrop-blur-md sticky top-0 z-[100]">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-purple-500/20">
                             <Megaphone className="w-5 h-5" />
